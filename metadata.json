@@ -1,0 +1,20 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "psimaker"
+            }
+        ],
+        "Category": "System Information",
+        "Description": "AI coding provider usage in your panel — a Plasma port of CodexBar",
+        "Description[de]": "KI-Provider-Nutzungslimits im Panel — eine Plasma-Portierung von CodexBar",
+        "Icon": "view-statistics-symbolic",
+        "Id": "com.github.psimaker.codexbar",
+        "License": "MIT",
+        "Name": "CodexBar",
+        "Version": "0.2.0",
+        "Website": "https://github.com/psimaker/codexbar-plasmoid"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0"
+}

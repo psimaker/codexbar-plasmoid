@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kcfg xmlns="http://www.kde.org/standards/kcfg/1.0"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0
+      http://www.kde.org/standards/kcfg/1.0/kcfg.xsd">
+    <kcfgfile name=""/>
+    <group name="General">
+        <entry name="refreshIntervalMinutes" type="Int">
+            <default>5</default>
+        </entry>
+        <entry name="enabledProviders" type="String">
+            <default>codex,claude</default>
+        </entry>
+        <entry name="showPercentInPanel" type="Bool">
+            <default>false</default>
+        </entry>
+        <entry name="panelPercentSource" type="String">
+            <default>session</default>
+        </entry>
+        <entry name="percentStyle" type="String">
+            <default>remaining</default>
+        </entry>
+        <entry name="hideCritters" type="Bool">
+            <default>false</default>
+        </entry>
+        <entry name="separateIcons" type="Bool">
+            <default>false</default>
+        </entry>
+        <entry name="showCost" type="Bool">
+            <default>true</default>
+        </entry>
+        <entry name="showStatus" type="Bool">
+            <default>true</default>
+        </entry>
+        <entry name="cliPath" type="String">
+            <default></default>
+        </entry>
+    </group>
+</kcfg>
