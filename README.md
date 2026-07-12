@@ -4,9 +4,7 @@ A KDE Plasma 6 panel widget that keeps AI coding-provider limits visible —
 a faithful re-creation of [CodexBar](https://github.com/steipete/CodexBar)
 (Peter Steinberger's macOS menu bar app), driven by the official CodexBar CLI.
 
-![Panel icon](docs/screenshots/panel.png)
-
-![Overview popup](docs/screenshots/overview.png)
+![CodexBar in a Plasma panel](docs/screenshots/codexbar-plasma.png)
 
 ## Features
 
