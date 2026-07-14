@@ -31,16 +31,32 @@ ColumnLayout {
         var out = []
         if (!usage)
             return out
-        var pw = Catalog.usableWindow(usage.primary)
-        var sw = Catalog.usableWindow(usage.secondary)
-        var tw = Catalog.usableWindow(usage.tertiary)
-        if (pw)
-            out.push({ title: Catalog.windowTitle(pw.windowMinutes, "Session"), win: pw, pace: null })
-        if (sw)
-            out.push({ title: Catalog.windowTitle(sw.windowMinutes, "Weekly"), win: sw,
-                       pace: entry.pace && entry.pace.secondary ? entry.pace.secondary : null })
-        if (tw)
-            out.push({ title: Catalog.windowTitle(tw.windowMinutes, "Monthly"), win: tw, pace: null })
+        var slots = ["primary", "secondary", "tertiary"]
+        for (var i = 0; i < slots.length; i++) {
+            var slot = slots[i]
+            var w = Catalog.usableWindow(usage[slot])
+            if (!w)
+                continue
+            var minutes = Catalog.effectiveWindowMinutes(w, providerId, slot)
+            var fallback = slot === "primary" ? "Session"
+                         : slot === "secondary" ? "Weekly" : "Monthly"
+            out.push({
+                title: Catalog.windowTitle(minutes, fallback),
+                win: w,
+                minutes: minutes,
+                pace: minutes === 10080 && entry.pace && entry.pace.secondary
+                      ? entry.pace.secondary : null
+            })
+        }
+        // Kimi's transport slots are inverted. Keep legacy ordering for every
+        // other provider, especially those without window duration metadata.
+        if (providerId === "kimi") {
+            out.sort(function (a, b) {
+                var am = a.minutes > 0 ? a.minutes : Number.MAX_VALUE
+                var bm = b.minutes > 0 ? b.minutes : Number.MAX_VALUE
+                return am - bm
+            })
+        }
         if (usage.extraRateWindows) {
             for (var i = 0; i < usage.extraRateWindows.length; i++) {
                 var ew = usage.extraRateWindows[i]
@@ -171,7 +187,8 @@ ColumnLayout {
 
             PlasmaComponents3.Label {
                 visible: text !== ""
-                text: Catalog.paceLine(section.modelData.pace)
+                text: Catalog.paceLine(section.modelData.pace, section.modelData.win,
+                                       section.modelData.minutes, plasmoidRoot.nowMs, providerId)
                 opacity: 0.55
                 font: Kirigami.Theme.smallFont
                 Layout.fillWidth: true

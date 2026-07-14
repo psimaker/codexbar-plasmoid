@@ -35,8 +35,10 @@ ColumnLayout {
                 return x ? Object.assign({}, x) : null
             }
             readonly property var usage: d && d.entry && d.entry.usage ? d.entry.usage : null
-            readonly property var primaryWin: usage ? Catalog.usableWindow(usage.primary) : null
-            readonly property var secondaryWin: usage ? Catalog.usableWindow(usage.secondary) : null
+            // Rate-window slots are provider implementation details. Kimi returns
+            // the weekly cap in primary and the five-hour cap in secondary.
+            readonly property var primaryWin: usage ? Catalog.windowFor(usage, providerId, 300) : null
+            readonly property var secondaryWin: usage ? Catalog.windowFor(usage, providerId, 10080) : null
 
             Layout.fillWidth: true
             implicitHeight: rowContent.implicitHeight + Kirigami.Units.smallSpacing * 2
