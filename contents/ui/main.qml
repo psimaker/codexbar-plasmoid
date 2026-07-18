@@ -51,10 +51,10 @@ PlasmoidItem {
             if (d && d.entry && d.entry.usage) {
                 var u = d.entry.usage
                 var parts = []
-                var pw = Catalog.usableWindow(u.primary)
-                var sw = Catalog.usableWindow(u.secondary)
-                if (Catalog.windowUsageKnown(pw)) parts.push("Session " + (100 - pw.usedPercent) + "% left")
-                if (Catalog.windowUsageKnown(sw)) parts.push("Weekly " + (100 - sw.usedPercent) + "% left")
+                var pw = Catalog.windowFor(u, p, 300)
+                var sw = Catalog.windowFor(u, p, 10080)
+                if (Catalog.windowUsageKnown(pw)) parts.push("Session " + (100 - Catalog.normalizedPercent(pw.usedPercent)) + "% left")
+                if (Catalog.windowUsageKnown(sw)) parts.push("Weekly " + (100 - Catalog.normalizedPercent(sw.usedPercent)) + "% left")
                 lines.push(m.name + " — " + (parts.length > 0 ? parts.join(" · ") : "no data"))
             } else if (d && d.loading) {
                 lines.push(m.name + " — refreshing…")
@@ -178,10 +178,10 @@ PlasmoidItem {
         if (!d || !d.entry || !d.entry.usage)
             return -1
         var u = d.entry.usage
-        var pw = Catalog.usableWindow(u.primary)
-        var sw = Catalog.usableWindow(u.secondary)
-        var rp = Catalog.windowUsageKnown(pw) ? 100 - pw.usedPercent : -1
-        var rs = Catalog.windowUsageKnown(sw) ? 100 - sw.usedPercent : -1
+        var pw = Catalog.windowFor(u, p, 300)
+        var sw = Catalog.windowFor(u, p, 10080)
+        var rp = Catalog.windowUsageKnown(pw) ? 100 - Catalog.normalizedPercent(pw.usedPercent) : -1
+        var rs = Catalog.windowUsageKnown(sw) ? 100 - Catalog.normalizedPercent(sw.usedPercent) : -1
         if (source === "weekly")
             return rs >= 0 ? rs : rp
         if (source === "lowest") {

@@ -152,26 +152,98 @@ function usableWindow(w) {
     return w
 }
 
+// The Kimi endpoint omits `windowMinutes` for its weekly window. Treat slots
+// as transport fields rather than as semantic names: providers may return
+// rate windows in either order.
+function effectiveWindowMinutes(w, providerId, slot) {
+    if (!w) return 0
+    var minutes = Number(w.windowMinutes)
+    if (isFinite(minutes) && minutes > 0) return minutes
+
+    var description = String(w.resetDescription || "").toLowerCase()
+    if (/per\s*5\s*hours?|5\s*h(?:ours?)?/.test(description)) return 300
+    if (providerId === "kimi" && slot === "primary") return 10080
+    return 0
+}
+
+function windowFor(usage, providerId, wantedMinutes) {
+    if (!usage) return null
+    var slots = ["primary", "secondary", "tertiary"]
+    for (var i = 0; i < slots.length; i++) {
+        var w = usableWindow(usage[slots[i]])
+        if (w && effectiveWindowMinutes(w, providerId, slots[i]) === wantedMinutes)
+            return w
+    }
+    // Preserve the legacy slot contract for other providers whose API payloads
+    // do not include a window duration. Kimi is the only known inverted pair.
+    if (providerId !== "kimi") {
+        if (wantedMinutes === 300) return usableWindow(usage.primary)
+        if (wantedMinutes === 10080) return usableWindow(usage.secondary)
+    }
+    return null
+}
+
 function windowUsageKnown(w) {
     return w && w.usageKnown !== false && w.usedPercent !== undefined
 }
 
+function normalizedPercent(value) {
+    var n = Number(value)
+    if (!isFinite(n)) return 0
+    return Math.max(0, Math.min(100, Math.round(n)))
+}
+
 function windowUsedText(w) {
-    return windowUsageKnown(w) ? String(w.usedPercent) : "–"
+    return windowUsageKnown(w) ? String(normalizedPercent(w.usedPercent)) : "–"
 }
 
 function windowBarPercent(w) {
-    return windowUsageKnown(w) ? w.usedPercent : 0
+    return windowUsageKnown(w) ? normalizedPercent(w.usedPercent) : 0
 }
 
-// Menu pace line, e.g. "Pace: 24% in reserve · Lasts until reset"
-// built from the CLI's pace.summary ("24% in reserve | Expected 51% used | Lasts until reset")
-function paceLine(pace) {
-    if (!pace || !pace.summary) return ""
-    var parts = pace.summary.split("|").map(function (p) { return p.trim() })
-    var keep = parts.filter(function (p) { return p.indexOf("Expected") !== 0 })
-    if (keep.length === 0) return ""
-    return "Pace: " + keep.join(" · ")
+// Menu pace line, matching CodexBarCore UsagePace / UsagePaceText. Kimi does
+// not return the CLI's pre-computed `pace` payload, so reproduce that logic
+// from the weekly window without rounding the values used in the projection.
+function paceLine(pace, win, windowMinutes, nowMs, providerId) {
+    if (pace && pace.summary) {
+        var parts = pace.summary.split("|").map(function (p) { return p.trim() })
+        var keep = parts.filter(function (p) { return p.indexOf("Expected") !== 0 })
+        if (keep.length > 0) return "Pace: " + keep.join(" · ")
+    }
+    if (windowMinutes !== 10080 || !windowUsageKnown(win) || !win.resetsAt)
+        return ""
+
+    var resetMs = Date.parse(win.resetsAt)
+    var durationMs = windowMinutes * 60 * 1000
+    var timeUntilReset = resetMs - nowMs
+    if (isNaN(resetMs) || timeUntilReset <= 0 || timeUntilReset > durationMs)
+        return ""
+
+    var elapsed = Math.max(0, Math.min(durationMs, durationMs - timeUntilReset))
+    var actual = Math.max(0, Math.min(100, Number(win.usedPercent)))
+    if (elapsed === 0 && actual > 0)
+        return ""
+    var expected = (elapsed / durationMs) * 100
+    // CodexBarCore hides pace until enough of the weekly window has elapsed.
+    if (expected < 3 && actual < 100)
+        return ""
+    var delta = actual - expected
+    var deltaDisplay = Math.round(Math.abs(delta))
+    var left = (Math.abs(delta) <= 2 || deltaDisplay === 0)
+        ? "On pace"
+        : deltaDisplay + "% " + (delta > 0 ? "in deficit" : "in reserve")
+
+    var right = ""
+    if (actual >= 100) {
+        right = "Runs out now"
+    } else if (elapsed > 0 && actual > 0) {
+        var etaMs = (100 - actual) / (actual / elapsed)
+        right = etaMs >= timeUntilReset ? "Lasts until reset"
+                                         : "Runs out in " + duration(Math.ceil(etaMs / 1000))
+    } else if (elapsed > 0 && actual === 0) {
+        right = "Lasts until reset"
+    }
+    return "Pace: " + left + (right !== "" ? " · " + right : "")
 }
 
 // Section title for a rate window ("Session", "Weekly", "Monthly", or a custom title)
