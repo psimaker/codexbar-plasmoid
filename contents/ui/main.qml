@@ -5,6 +5,7 @@ import org.kde.plasma.core as PlasmaCore
 import org.kde.plasma.plasma5support as P5Support
 import org.kde.kirigami as Kirigami
 import "code/catalog.js" as Catalog
+import "code/claudeAccounts.js" as ClaudeAccounts
 
 PlasmoidItem {
     id: root
@@ -44,6 +45,32 @@ PlasmoidItem {
     // per-provider request generation: responses from an older generation
     // (e.g. after a config change re-triggered a refresh) are discarded
     property var requestGen: ({})
+
+    // Optional schema-v1 claude-swap-compatible adapter state. Normal Claude
+    // usage/cost queries remain active for the panel, overview and fallback UI.
+    readonly property bool claudeAccountsEnabled:
+        Plasmoid.configuration.enableClaudeAccounts
+        && enabledProviders.indexOf("claude") >= 0
+    readonly property string claudeAdapterExecutable: {
+        var configured = (Plasmoid.configuration.claudeAdapterPath || "").trim()
+        return configured.length > 0 ? configured : "cswap"
+    }
+    property var claudeAccountData: ({
+        valid: false,
+        accounts: [],
+        activeAccountNumber: null,
+        loading: false,
+        error: "",
+        switchError: "",
+        fetchedAt: 0
+    })
+    property var pendingClaudeList: ({})
+    property var pendingClaudeSwitch: ({})
+    property int claudeAdapterGen: 0
+    property int claudeListGen: 0
+    property bool claudeSwitchInFlight: false
+    property int claudeSwitchingSlot: 0
+    property bool componentReady: false
 
     // must fit the full representation (19 grid units wide) before switching
     switchWidth: Kirigami.Units.gridUnit * 19
@@ -86,11 +113,117 @@ PlasmoidItem {
         return "'" + s.replace(/'/g, "'\\''") + "'"
     }
 
+    function shellQuoteExecutable(s) {
+        // A settings UI commonly receives ~/.local/bin/...; expand only this
+        // leading home shorthand and quote the entire remaining path.
+        if (s.indexOf("~/") === 0)
+            return '"$HOME"/' + shellQuote(s.substring(2))
+        return shellQuote(s)
+    }
+
     function cliCmd(args) {
         var exe = (Plasmoid.configuration.cliPath || "").trim()
         var quoted = exe.length > 0 ? shellQuote(exe) : "codexbar"
         // -k 10: hard-kill if SIGTERM is ignored after the 120s timeout
         return 'PATH="$HOME/.local/bin:$PATH"; timeout -k 10 120 ' + quoted + " " + args + " 2>/dev/null"
+    }
+
+    function claudeAdapterCmd(operation, slot) {
+        var quoted = shellQuoteExecutable(claudeAdapterExecutable)
+        var prefix = 'PATH="$HOME/.local/bin:$PATH"; '
+        if (operation === "list") {
+            // Bound what Plasma's executable data engine can capture, while
+            // retaining one extra byte so the parser can report overflow.
+            var pipeline = quoted + " --list --json 2>/dev/null | head -c "
+                + (ClaudeAccounts.MAX_OUTPUT_BYTES + 1)
+            return prefix + "timeout -k 5 30 sh -c " + shellQuote(pipeline)
+        }
+        if (operation === "switch" && typeof slot === "number" && isFinite(slot)
+                && Math.floor(slot) === slot && slot > 0)
+            return prefix + quoted + " --switch-to " + slot + " --json 2>/dev/null"
+        return ""
+    }
+
+    function updateClaudeAccountData(changes) {
+        claudeAccountData = Object.assign({}, claudeAccountData, changes)
+        bump()
+    }
+
+    function clearClaudeAccountData() {
+        claudeAccountData = {
+            valid: false,
+            accounts: [],
+            activeAccountNumber: null,
+            loading: false,
+            error: "",
+            switchError: "",
+            fetchedAt: 0
+        }
+        bump()
+    }
+
+    function refreshClaudeAccounts() {
+        if (!claudeAccountsEnabled || claudeSwitchInFlight)
+            return
+        var cmd = claudeAdapterCmd("list", 0)
+        if (cmd === "" || pendingClaudeList[cmd] !== undefined)
+            return
+        var listGen = ++claudeListGen
+        pendingClaudeList[cmd] = { adapterGen: claudeAdapterGen, listGen: listGen }
+        updateClaudeAccountData({ loading: true })
+        executable.connectSource(cmd)
+    }
+
+    function claudeAdapterErrorText(exitCode, parseError) {
+        if (exitCode === 124 || exitCode === 137)
+            return "Timed out querying the Claude account adapter."
+        if (exitCode === 127)
+            return "Claude account adapter not found — set its executable path in the settings."
+        if (parseError && parseError.length > 0)
+            return parseError
+        if (exitCode === 0)
+            return "The Claude account adapter returned no account data."
+        return "Claude account adapter failed (exit " + exitCode + ")."
+    }
+
+    function claudeAccountForSlot(slot) {
+        var accounts = claudeAccountData.accounts || []
+        for (var i = 0; i < accounts.length; i++) {
+            if (accounts[i].number === slot)
+                return accounts[i]
+        }
+        return null
+    }
+
+    function canSwitchClaudeAccount(account) {
+        return claudeAccountsEnabled && claudeAccountData.valid
+            && !claudeAccountData.loading && !claudeSwitchInFlight
+            && ClaudeAccounts.canActivate(account)
+    }
+
+    function switchClaudeAccount(slot) {
+        if (claudeSwitchInFlight || typeof slot !== "number" || !isFinite(slot)
+                || Math.floor(slot) !== slot || slot <= 0)
+            return
+        var account = claudeAccountForSlot(slot)
+        if (!canSwitchClaudeAccount(account))
+            return
+        var cmd = claudeAdapterCmd("switch", slot)
+        if (cmd === "" || pendingClaudeSwitch[cmd] !== undefined)
+            return
+        claudeSwitchInFlight = true
+        claudeSwitchingSlot = slot
+        updateClaudeAccountData({ switchError: "" })
+        pendingClaudeSwitch[cmd] = { adapterGen: claudeAdapterGen, slot: slot }
+        executable.connectSource(cmd)
+    }
+
+    function isClaudeAccountDataStale() {
+        rev
+        if (!claudeAccountData.valid || !claudeAccountData.fetchedAt)
+            return true
+        var maxAge = Math.max(1, Plasmoid.configuration.refreshIntervalMinutes) * 60000 * 3
+        return (Date.now() - claudeAccountData.fetchedAt) > maxAge
     }
 
     function refreshAll(force) {
@@ -99,6 +232,9 @@ PlasmoidItem {
             if (force === true || !autoRefreshBlocked[provider])
                 refreshProvider(provider)
         }
+        // The account adapter is a separate executable from the codexbar CLI,
+        // so a CLI crash block must not suppress its polling.
+        refreshClaudeAccounts()
     }
 
     function supportsCost(p) {
@@ -186,6 +322,60 @@ PlasmoidItem {
     }
 
     function handleData(source, exitCode, stdout) {
+        var accountReq = pendingClaudeList[source]
+        if (accountReq !== undefined) {
+            delete pendingClaudeList[source]
+            if (accountReq.adapterGen !== claudeAdapterGen || accountReq.listGen !== claudeListGen) {
+                // A disable/re-enable or path edit may resolve to the same
+                // command string. Once the old source is disconnected, start
+                // the fresh generation that was previously de-duplicated.
+                if (claudeAccountsEnabled)
+                    refreshClaudeAccounts()
+                return
+            }
+            var parsedAccounts = (exitCode === 124 || exitCode === 137)
+                ? { ok: false, error: "" }
+                : ClaudeAccounts.parseList(stdout)
+            if (parsedAccounts.ok) {
+                updateClaudeAccountData({
+                    valid: true,
+                    accounts: parsedAccounts.value.accounts,
+                    activeAccountNumber: parsedAccounts.value.activeAccountNumber,
+                    loading: false,
+                    error: "",
+                    fetchedAt: Date.now()
+                })
+            } else {
+                updateClaudeAccountData({
+                    loading: false,
+                    error: claudeAdapterErrorText(exitCode, parsedAccounts.error)
+                })
+            }
+            return
+        }
+
+        var switchReq = pendingClaudeSwitch[source]
+        if (switchReq !== undefined) {
+            delete pendingClaudeSwitch[source]
+            claudeSwitchInFlight = false
+            claudeSwitchingSlot = 0
+            if (switchReq.adapterGen === claudeAdapterGen) {
+                var parsedSwitch = ClaudeAccounts.parseSwitch(stdout, switchReq.slot)
+                updateClaudeAccountData({
+                    switchError: parsedSwitch.ok ? ""
+                        : claudeAdapterErrorText(exitCode, parsedSwitch.error)
+                })
+            } else {
+                bump()
+            }
+            // Switching affects both the adapter projection and the ambient
+            // Claude snapshot used by panel/overview/status/cost UI.
+            if (enabledProviders.indexOf("claude") >= 0)
+                refreshProvider("claude")
+            refreshClaudeAccounts()
+            return
+        }
+
         var req = pendingUsage[source]
         if (req !== undefined) {
             delete pendingUsage[source]
@@ -313,9 +503,30 @@ PlasmoidItem {
     }
 
     Component.onCompleted: {
+        componentReady = true
         currentTab = defaultTab()
         deferAutomaticCostScans()
         refreshAll(false)
+    }
+
+    onClaudeAccountsEnabledChanged: {
+        if (!componentReady)
+            return
+        claudeAdapterGen++
+        claudeListGen++
+        clearClaudeAccountData()
+        if (claudeAccountsEnabled)
+            refreshClaudeAccounts()
+    }
+
+    onClaudeAdapterExecutableChanged: {
+        if (!componentReady)
+            return
+        claudeAdapterGen++
+        claudeListGen++
+        clearClaudeAccountData()
+        if (claudeAccountsEnabled)
+            refreshClaudeAccounts()
     }
 
     onEnabledProvidersChanged: {

@@ -15,6 +15,8 @@ KCM.SimpleKCM {
     property alias cfg_showCost: showCost.checked
     property alias cfg_showStatus: showStatus.checked
     property alias cfg_cliPath: cliPath.text
+    property alias cfg_enableClaudeAccounts: enableClaudeAccounts.checked
+    property alias cfg_claudeAdapterPath: claudeAdapterPath.text
     property string cfg_panelPercentSource
     property string cfg_percentStyle
 
@@ -135,6 +137,30 @@ KCM.SimpleKCM {
             Kirigami.FormData.label: i18n("codexbar CLI path:")
             placeholderText: i18n("auto (codexbar in PATH)")
             Layout.fillWidth: true
+        }
+
+        Item { Kirigami.FormData.isSection: true }
+
+        QQC2.CheckBox {
+            id: enableClaudeAccounts
+            Kirigami.FormData.label: i18n("Claude accounts:")
+            text: i18n("Show all accounts from a schema-v1 adapter")
+        }
+
+        QQC2.TextField {
+            id: claudeAdapterPath
+            Kirigami.FormData.label: i18n("Adapter executable path:")
+            enabled: enableClaudeAccounts.checked
+            placeholderText: i18n("auto (cswap in PATH)")
+            Layout.fillWidth: true
+        }
+
+        QQC2.Label {
+            Layout.fillWidth: true
+            enabled: enableClaudeAccounts.checked
+            text: i18n("The widget only runs --list --json and an explicitly selected --switch-to <slot> --json operation.")
+            wrapMode: Text.WordWrap
+            opacity: 0.7
         }
     }
 }

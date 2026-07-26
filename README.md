@@ -22,9 +22,12 @@ a faithful re-creation of [CodexBar](https://github.com/steipete/CodexBar)
   because large local histories can be resource-intensive.
 - **Actions:** Refresh, explicit cost-history refresh, Usage Dashboard, Status
   Page, Settings, About.
+- **Optional Claude multi-account view:** stacked 5-hour and 7-day cards,
+  active-account state, and explicit account switching through a compatible
+  schema-v1 `claude-swap` adapter.
 - **Settings:** refresh interval, any of the 58 providers the CLI supports,
   panel percentage (session/weekly/lowest, remaining/used), plain bars,
-  cost/status toggles, custom CLI path.
+  cost/status toggles, custom CLI path, Claude account adapter.
 
 ## Requirements
 
@@ -54,6 +57,34 @@ section is enabled, automatic cost scans are serialized and run no more than
 once per provider per hour. Use **Refresh cost history** on a Codex or Claude
 provider page when an immediate scan is required.
 
+### Optional Claude multi-account adapter
+
+Enable **Show all accounts from a schema-v1 adapter** and set the adapter
+executable path. Compatible adapters must implement only these CodexBar
+operations:
+
+```text
+--list --json
+--switch-to <positive-slot> --json
+```
+
+The widget validates schema version 1 and retains only account slot, optional
+`alias`/`organizationName`/email display identity, active state, usage status,
+the 5-hour/7-day usage windows, and optional model-scoped weekly windows. When
+present, identity is displayed as `alias`, then `organizationName`, then email.
+It does not read credentials or profile IDs.
+Account switches are serialized and only run after an explicit click.
+
+Examples:
+
+- Install [`claude-swap`](https://github.com/realiti4/claude-swap) and leave
+  the path empty to use `cswap` from `PATH`.
+- For another compatible adapter, set its absolute path or a path beginning
+  with `~/`.
+
+The CodexBar CLI remains required: normal Claude usage continues to power the
+panel icon, overview, cost, provider status, and fallback card.
+
 ## Install
 
 ```bash
@@ -74,8 +105,8 @@ systemctl --user restart plasma-plasmashell.service   # reload cached QML
 ## Not ported (macOS-only upstream features)
 
 Menu bar animations (blink/wiggle), WidgetKit widgets, notifications,
-cost-history charts, the multi-account UI and the "Add Account" flow —
-logins are handled by the provider CLIs themselves.
+cost-history charts, and the "Add Account" flow — logins are handled by the
+provider CLIs themselves.
 
 ## Credits & license
 

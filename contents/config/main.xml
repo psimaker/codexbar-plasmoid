@@ -38,5 +38,11 @@
         <entry name="cliPath" type="String">
             <default></default>
         </entry>
+        <entry name="enableClaudeAccounts" type="Bool">
+            <default>false</default>
+        </entry>
+        <entry name="claudeAdapterPath" type="String">
+            <default></default>
+        </entry>
     </group>
 </kcfg>

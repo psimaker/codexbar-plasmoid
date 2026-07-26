@@ -202,10 +202,19 @@ Item {
                 ProviderCard {
                     required property string modelData
                     visible: fullRoot.currentTab === modelData
+                             && !(modelData === "claude"
+                                  && fullRoot.plasmoidRoot.claudeAccountsEnabled)
                     Layout.fillWidth: true
                     plasmoidRoot: fullRoot.plasmoidRoot
                     providerId: modelData
                 }
+            }
+
+            ClaudeAccountsPage {
+                visible: fullRoot.currentTab === "claude"
+                         && fullRoot.plasmoidRoot.claudeAccountsEnabled
+                Layout.fillWidth: true
+                plasmoidRoot: fullRoot.plasmoidRoot
             }
 
             AboutPage {
