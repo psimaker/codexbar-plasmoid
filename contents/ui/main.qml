@@ -139,8 +139,13 @@ PlasmoidItem {
             return prefix + "timeout -k 5 30 sh -c " + shellQuote(pipeline)
         }
         if (operation === "switch" && typeof slot === "number" && isFinite(slot)
-                && Math.floor(slot) === slot && slot > 0)
-            return prefix + quoted + " --switch-to " + slot + " --json 2>/dev/null"
+                && Math.floor(slot) === slot && slot > 0) {
+            // Bound the switch like the list probe so a hung adapter (credential
+            // lock, keychain prompt, or backend call) cannot leave
+            // claudeSwitchInFlight set and disable every switch button until
+            // the plasmoid is reloaded.
+            return prefix + "timeout -k 5 30 " + quoted + " --switch-to " + slot + " --json 2>/dev/null"
+        }
         return ""
     }
 
@@ -218,12 +223,20 @@ PlasmoidItem {
         executable.connectSource(cmd)
     }
 
-    function isClaudeAccountDataStale() {
+    // Per-account staleness: prefer the adapter's reported usage measurement
+    // time, falling back to the dataset poll timestamp when the adapter did
+    // not report freshness. This keeps cached/last-known usage from reading as
+    // fresh just because the widget polled again.
+    function isClaudeAccountStale(account) {
         rev
-        if (!claudeAccountData.valid || !claudeAccountData.fetchedAt)
+        if (!claudeAccountData.valid)
+            return true
+        var ts = (account && typeof account.usageMeasuredAt === "number")
+            ? account.usageMeasuredAt : claudeAccountData.fetchedAt
+        if (!ts)
             return true
         var maxAge = Math.max(1, Plasmoid.configuration.refreshIntervalMinutes) * 60000 * 3
-        return (Date.now() - claudeAccountData.fetchedAt) > maxAge
+        return (Date.now() - ts) > maxAge
     }
 
     function refreshAll(force) {
@@ -333,9 +346,10 @@ PlasmoidItem {
                     refreshClaudeAccounts()
                 return
             }
+            var listNowMs = Date.now()
             var parsedAccounts = (exitCode === 124 || exitCode === 137)
                 ? { ok: false, error: "" }
-                : ClaudeAccounts.parseList(stdout)
+                : ClaudeAccounts.parseList(stdout, listNowMs)
             if (parsedAccounts.ok) {
                 updateClaudeAccountData({
                     valid: true,
@@ -343,7 +357,7 @@ PlasmoidItem {
                     activeAccountNumber: parsedAccounts.value.activeAccountNumber,
                     loading: false,
                     error: "",
-                    fetchedAt: Date.now()
+                    fetchedAt: listNowMs
                 })
             } else {
                 updateClaudeAccountData({

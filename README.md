@@ -72,7 +72,11 @@ The widget validates schema version 1 and retains only account slot, optional
 `alias`/`organizationName`/email display identity, active state, usage status,
 the 5-hour/7-day usage windows, and optional model-scoped weekly windows. When
 present, identity is displayed as `alias`, then `organizationName`, then email.
-It does not read credentials or profile IDs.
+Each account row may optionally report `usageFetchedAt` (ISO 8601 timestamp) or
+`usageAgeSeconds` (non-negative seconds); when present, the card timestamp and
+staleness reflect measurement time rather than poll time, so cached or
+last-known usage is shown as stale instead of fresh. It does not read
+credentials or profile IDs.
 Account switches are serialized and only run after an explicit click.
 
 Examples:

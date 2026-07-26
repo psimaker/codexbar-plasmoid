@@ -137,7 +137,32 @@ function parseScopedWindows(raw) {
     return windows
 }
 
-function parseList(text) {
+// Optional per-account usage freshness. schema-v1 adapters may report when
+// each account's usage was measured so cached or last-known values are not
+// shown as fresh. usageFetchedAt (ISO 8601) wins; usageAgeSeconds (non-negative
+// seconds) is measured back from the poll time. Absent or malformed values
+// yield null, which makes the card fall back to the dataset poll timestamp.
+function parseUsageMeasuredAt(row, nowMs) {
+    if (hasOwn(row, "usageFetchedAt") && row.usageFetchedAt !== null) {
+        if (typeof row.usageFetchedAt === "string" && row.usageFetchedAt.trim() !== "") {
+            var ms = Date.parse(row.usageFetchedAt)
+            if (!isNaN(ms))
+                return ms
+        }
+        return null
+    }
+    if (hasOwn(row, "usageAgeSeconds") && row.usageAgeSeconds !== null) {
+        if (typeof row.usageAgeSeconds === "number" && isFinite(row.usageAgeSeconds)
+                && row.usageAgeSeconds >= 0)
+            return nowMs - Math.floor(row.usageAgeSeconds * 1000)
+        return null
+    }
+    return null
+}
+
+function parseList(text, nowMs) {
+    if (nowMs === undefined)
+        nowMs = Date.now()
     var decoded = parseJson(text, "account list")
     if (!decoded.ok)
         return decoded
@@ -197,7 +222,8 @@ function parseList(text) {
             usageStatus: row.usageStatus,
             fiveHour: fiveHour.value,
             sevenDay: sevenDay.value,
-            scoped: parseScopedWindows(usage.scoped)
+            scoped: parseScopedWindows(usage.scoped),
+            usageMeasuredAt: parseUsageMeasuredAt(row, nowMs)
         }
         if (row.active)
             activeSlots.push(row.number)

@@ -65,12 +65,14 @@ ColumnLayout {
         PlasmaComponents3.Label {
             text: {
                 card.plasmoidRoot.rev
-                var fetchedAt = card.plasmoidRoot.claudeAccountData.fetchedAt
-                if (!fetchedAt)
+                var measuredAt = (card.account && typeof card.account.usageMeasuredAt === "number")
+                    ? card.account.usageMeasuredAt
+                    : card.plasmoidRoot.claudeAccountData.fetchedAt
+                if (!measuredAt)
                     return ""
-                var updated = Catalog.updatedText(new Date(fetchedAt).toISOString(),
+                var updated = Catalog.updatedText(new Date(measuredAt).toISOString(),
                                                   card.plasmoidRoot.nowMs)
-                return card.plasmoidRoot.isClaudeAccountDataStale()
+                return card.plasmoidRoot.isClaudeAccountStale(card.account)
                     ? updated + i18n(" · stale") : updated
             }
             opacity: 0.6
