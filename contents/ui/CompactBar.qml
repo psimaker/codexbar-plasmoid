@@ -17,14 +17,19 @@ MouseArea {
 
     readonly property bool vertical: Plasmoid.formFactor === PlasmaCore.Types.Vertical
     readonly property bool separate: Plasmoid.configuration.separateIcons
-    readonly property bool iconOnly: Plasmoid.configuration.iconOnlyInPanel
-    readonly property var iconModel: iconOnly
-                                     ? (plasmoidRoot.enabledProviders.length > 0
-                                        ? plasmoidRoot.enabledProviders
-                                        : ["__merged__"])
-                                     : (separate && plasmoidRoot.enabledProviders.length > 0
-                                        ? plasmoidRoot.enabledProviders
-                                        : ["__merged__"])
+    readonly property string configuredDisplayMode: Plasmoid.configuration.panelDisplayMode || ""
+    readonly property string displayMode: configuredDisplayMode !== ""
+                                                  ? configuredDisplayMode
+                                                  : (Plasmoid.configuration.iconOnlyInPanel
+                                                     ? "logos" : "meters")
+    readonly property bool showsLogos: displayMode === "logos"
+                                               || displayMode === "logos-and-meters"
+    readonly property bool showsMeters: displayMode === "meters"
+                                                || displayMode === "logos-and-meters"
+    readonly property bool perProvider: showsLogos || separate
+    readonly property var iconModel: perProvider && plasmoidRoot.enabledProviders.length > 0
+                                     ? plasmoidRoot.enabledProviders
+                                     : ["__merged__"]
 
     readonly property real iconSide: vertical
         ? Math.min(Math.round(width * 0.75), Kirigami.Units.iconSizes.medium)
@@ -78,7 +83,7 @@ MouseArea {
 
     onClicked: function (mouse) {
         // in per-provider mode, clicking a specific icon opens its tab
-        if (separate || iconOnly) {
+        if (perProvider) {
             var providerId = providerAt(mouse.x, mouse.y)
             if (providerId !== "" && providerId !== "__merged__") {
                 var switchingProvider = plasmoidRoot.expanded
@@ -110,23 +115,8 @@ MouseArea {
                 readonly property string providerId: modelData
                 spacing: Kirigami.Units.smallSpacing
 
-                CritterIcon {
-                    // Keep the standard merged meter as a visible, clickable
-                    // fallback when logo mode has no enabled providers.
-                    visible: !compactRoot.iconOnly || providerItem.providerId === "__merged__"
-                    // merged icon: plain meter bars like the original CodexBar status item
-                    providerId: providerItem.providerId === "__merged__" ? "" : providerItem.providerId
-                    Layout.preferredWidth: compactRoot.iconSide
-                    Layout.preferredHeight: compactRoot.iconSide
-                    Layout.alignment: Qt.AlignVCenter
-                    remainingPrimary: compactRoot.remainingFor(providerItem.providerId, "session")
-                    remainingSecondary: compactRoot.remainingFor(providerItem.providerId, "weekly")
-                    stale: compactRoot.staleFor(providerItem.providerId)
-                    hideCritters: Plasmoid.configuration.hideCritters
-                }
-
                 Item {
-                    visible: compactRoot.iconOnly && providerItem.providerId !== "__merged__"
+                    visible: compactRoot.showsLogos && providerItem.providerId !== "__merged__"
                     Layout.preferredWidth: compactRoot.iconSide
                     Layout.preferredHeight: compactRoot.iconSide
                     Layout.alignment: Qt.AlignVCenter
@@ -146,11 +136,26 @@ MouseArea {
                     }
                 }
 
+                CritterIcon {
+                    // Keep the standard merged meter as a visible, clickable
+                    // fallback when a logo mode has no enabled providers.
+                    visible: compactRoot.showsMeters || providerItem.providerId === "__merged__"
+                    // merged icon: plain meter bars like the original CodexBar status item
+                    providerId: providerItem.providerId === "__merged__" ? "" : providerItem.providerId
+                    Layout.preferredWidth: compactRoot.iconSide
+                    Layout.preferredHeight: compactRoot.iconSide
+                    Layout.alignment: Qt.AlignVCenter
+                    remainingPrimary: compactRoot.remainingFor(providerItem.providerId, "session")
+                    remainingSecondary: compactRoot.remainingFor(providerItem.providerId, "weekly")
+                    stale: compactRoot.staleFor(providerItem.providerId)
+                    hideCritters: Plasmoid.configuration.hideCritters
+                }
+
                 PlasmaComponents3.Label {
-                    // Logo mode labels always belong to one real provider;
-                    // do not present the empty fallback as a merged value.
+                    // Logo modes label real providers only; do not present
+                    // their empty fallback as a merged percentage value.
                     visible: Plasmoid.configuration.showPercentInPanel
-                             && (!compactRoot.iconOnly || providerItem.providerId !== "__merged__")
+                             && (!compactRoot.showsLogos || providerItem.providerId !== "__merged__")
                     Layout.alignment: Qt.AlignVCenter
                     font.pixelSize: Math.max(9, Math.round(compactRoot.iconSide * 0.62))
                     text: {
