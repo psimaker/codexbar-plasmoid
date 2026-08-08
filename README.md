@@ -27,14 +27,19 @@ a faithful re-creation of [CodexBar](https://github.com/steipete/CodexBar)
 ## Requirements
 
 - KDE Plasma 6 (`kpackagetool6`)
-- The [CodexBar CLI](https://github.com/steipete/CodexBar#cli) on your PATH
-  (or set its location in the widget settings):
+- The [CodexBar CLI](https://github.com/steipete/CodexBar#cli) v0.43.0 or
+  newer on your PATH (or set its location in the widget settings). CodexBar
+  CLI v0.42.1 has a known Linux crash while formatting rate-limit windows,
+  fixed in [v0.43.0](https://github.com/steipete/CodexBar/releases/tag/v0.43.0):
 
   ```bash
   # Homebrew
   brew install steipete/tap/codexbar
   # or download CodexBarCLI-v<tag>-linux-<arch>.tar.gz from the CodexBar
-  # releases page and drop the binary into ~/.local/bin/codexbar
+  # releases page. Keep CodexBarCLI and VERSION together so --version works:
+  mkdir -p ~/.local/share/codexbar-cli ~/.local/bin
+  tar -xzf CodexBarCLI-v<tag>-linux-<arch>.tar.gz -C ~/.local/share/codexbar-cli
+  ln -sfn ~/.local/share/codexbar-cli/CodexBarCLI ~/.local/bin/codexbar
   ```
 
   The CLI reads the credentials of the provider tools you already use

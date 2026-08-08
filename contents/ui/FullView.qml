@@ -229,7 +229,7 @@ Item {
                 visible: fullRoot.currentTab !== "about"
                 iconName: "view-refresh-symbolic"
                 label: i18n("Refresh")
-                onActivated: fullRoot.plasmoidRoot.refreshAll()
+                onActivated: fullRoot.plasmoidRoot.refreshAll(true)
             }
 
             MenuRow {

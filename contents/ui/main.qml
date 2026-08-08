@@ -32,6 +32,9 @@ PlasmoidItem {
 
     property var pendingUsage: ({})
     property var pendingCost: ({})
+    // Providers whose CLI process died with SIGSEGV are skipped by automatic
+    // refreshes. A manual refresh still retries after the CLI was upgraded.
+    property var autoRefreshBlocked: ({})
     // per-provider request generation: responses from an older generation
     // (e.g. after a config change re-triggered a refresh) are discarded
     property var requestGen: ({})
@@ -84,9 +87,12 @@ PlasmoidItem {
         return 'PATH="$HOME/.local/bin:$PATH"; timeout -k 10 120 ' + quoted + " " + args + " 2>/dev/null"
     }
 
-    function refreshAll() {
-        for (var i = 0; i < enabledProviders.length; i++)
-            refreshProvider(enabledProviders[i])
+    function refreshAll(force) {
+        for (var i = 0; i < enabledProviders.length; i++) {
+            var provider = enabledProviders[i]
+            if (force === true || !autoRefreshBlocked[provider])
+                refreshProvider(provider)
+        }
     }
 
     function refreshProvider(p) {
@@ -111,6 +117,8 @@ PlasmoidItem {
     function usageErrorText(exitCode, parseFailed) {
         if (exitCode === 124 || exitCode === 137)
             return "Timed out querying the codexbar CLI"
+        if (exitCode === 139)
+            return "codexbar CLI crashed (SIGSEGV) — update to v0.43.0 or newer, then refresh manually"
         if (exitCode === 127)
             return "codexbar CLI not found — set the path in the settings"
         if (parseFailed)
@@ -131,6 +139,11 @@ PlasmoidItem {
                 d = usageData[req.p] = {}
             d.loading = false
             d.fetchedAt = Date.now()
+
+            if (exitCode === 139)
+                autoRefreshBlocked[req.p] = true
+            else
+                delete autoRefreshBlocked[req.p]
 
             var trimmed = (stdout || "").trim()
             var parsed = null
@@ -232,12 +245,12 @@ PlasmoidItem {
         interval: Math.max(1, Plasmoid.configuration.refreshIntervalMinutes) * 60000
         running: true
         repeat: true
-        onTriggered: root.refreshAll()
+        onTriggered: root.refreshAll(false)
     }
 
     Component.onCompleted: {
         currentTab = defaultTab()
-        refreshAll()
+        refreshAll(false)
     }
 
     onEnabledProvidersChanged: {
@@ -246,7 +259,7 @@ PlasmoidItem {
                 || enabledProviders.indexOf(currentTab) >= 0
         if (!valid)
             currentTab = defaultTab()
-        refreshAll()
+        refreshAll(true)
     }
 
     onExpandedChanged: {
@@ -258,7 +271,7 @@ PlasmoidItem {
         PlasmaCore.Action {
             text: i18n("Refresh")
             icon.name: "view-refresh-symbolic"
-            onTriggered: root.refreshAll()
+            onTriggered: root.refreshAll(true)
         }
     ]
 
