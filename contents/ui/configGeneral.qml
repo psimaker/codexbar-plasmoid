@@ -10,6 +10,7 @@ KCM.SimpleKCM {
     property alias cfg_refreshIntervalMinutes: refreshSpin.value
     property alias cfg_showPercentInPanel: showPercent.checked
     property alias cfg_separateIcons: separateIcons.checked
+    property alias cfg_iconOnlyInPanel: iconOnly.checked
     property alias cfg_hideCritters: hideCritters.checked
     property alias cfg_showCost: showCost.checked
     property alias cfg_showStatus: showStatus.checked
@@ -56,6 +57,13 @@ KCM.SimpleKCM {
             id: showPercent
             text: i18n("Show percentage next to the icon")
         }
+
+        QQC2.CheckBox {
+            id: iconOnly
+            text: i18n("Show provider logos in panel")
+        }
+
+        Item { Kirigami.FormData.isSection: true }
 
         QQC2.ComboBox {
             id: sourceCombo

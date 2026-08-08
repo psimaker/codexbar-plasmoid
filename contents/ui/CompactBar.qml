@@ -4,6 +4,7 @@ import org.kde.plasma.plasmoid
 import org.kde.plasma.core as PlasmaCore
 import org.kde.plasma.components as PlasmaComponents3
 import org.kde.kirigami as Kirigami
+import "code/catalog.js" as Catalog
 
 // Panel representation. Default: ONE merged critter icon showing the
 // worst-case (lowest remaining) usage across all enabled providers.
@@ -16,9 +17,14 @@ MouseArea {
 
     readonly property bool vertical: Plasmoid.formFactor === PlasmaCore.Types.Vertical
     readonly property bool separate: Plasmoid.configuration.separateIcons
-    readonly property var iconModel: separate && plasmoidRoot.enabledProviders.length > 0
-                                     ? plasmoidRoot.enabledProviders
-                                     : ["__merged__"]
+    readonly property bool iconOnly: Plasmoid.configuration.iconOnlyInPanel
+    readonly property var iconModel: iconOnly
+                                     ? (plasmoidRoot.enabledProviders.length > 0
+                                        ? plasmoidRoot.enabledProviders
+                                        : ["__merged__"])
+                                     : (separate && plasmoidRoot.enabledProviders.length > 0
+                                        ? plasmoidRoot.enabledProviders
+                                        : ["__merged__"])
 
     readonly property real iconSide: vertical
         ? Math.min(Math.round(width * 0.75), Kirigami.Units.iconSizes.medium)
@@ -58,14 +64,29 @@ MouseArea {
         return true
     }
 
+    function providerAt(x, y) {
+        var point = grid.mapFromItem(compactRoot, x, y)
+        for (var i = 0; i < providerRepeater.count; i++) {
+            var item = providerRepeater.itemAt(i)
+            if (item
+                    && point.x >= item.x && point.x < item.x + item.width
+                    && point.y >= item.y && point.y < item.y + item.height)
+                return iconModel[i]
+        }
+        return ""
+    }
+
     onClicked: function (mouse) {
         // in per-provider mode, clicking a specific icon opens its tab
-        if (separate && plasmoidRoot.enabledProviders.length > 1) {
-            var item = vertical
-                ? grid.childAt(grid.width / 2, mouse.y - grid.y)
-                : grid.childAt(mouse.x - grid.x, grid.height / 2)
-            if (item && item.providerId !== undefined && item.providerId !== "__merged__")
-                plasmoidRoot.currentTab = item.providerId
+        if (separate || iconOnly) {
+            var providerId = providerAt(mouse.x, mouse.y)
+            if (providerId !== "" && providerId !== "__merged__") {
+                var switchingProvider = plasmoidRoot.expanded
+                        && plasmoidRoot.currentTab !== providerId
+                plasmoidRoot.currentTab = providerId
+                if (switchingProvider)
+                    return
+            }
         }
         plasmoidRoot.expanded = !plasmoidRoot.expanded
     }
@@ -80,15 +101,19 @@ MouseArea {
         columnSpacing: Kirigami.Units.smallSpacing * 2
 
         Repeater {
+            id: providerRepeater
             model: compactRoot.iconModel
 
             RowLayout {
                 id: providerItem
                 required property string modelData
                 readonly property string providerId: modelData
-                spacing: Math.round(Kirigami.Units.smallSpacing / 2)
+                spacing: Kirigami.Units.smallSpacing
 
                 CritterIcon {
+                    // Keep the standard merged meter as a visible, clickable
+                    // fallback when logo mode has no enabled providers.
+                    visible: !compactRoot.iconOnly || providerItem.providerId === "__merged__"
                     // merged icon: plain meter bars like the original CodexBar status item
                     providerId: providerItem.providerId === "__merged__" ? "" : providerItem.providerId
                     Layout.preferredWidth: compactRoot.iconSide
@@ -100,8 +125,32 @@ MouseArea {
                     hideCritters: Plasmoid.configuration.hideCritters
                 }
 
+                Item {
+                    visible: compactRoot.iconOnly && providerItem.providerId !== "__merged__"
+                    Layout.preferredWidth: compactRoot.iconSide
+                    Layout.preferredHeight: compactRoot.iconSide
+                    Layout.alignment: Qt.AlignVCenter
+
+                    Rectangle {
+                        anchors.fill: parent
+                        z: -1
+                        radius: Kirigami.Units.smallSpacing
+                        color: Catalog.meta(providerItem.providerId).color
+                    }
+
+                    Image {
+                        anchors.fill: parent
+                        source: Qt.resolvedUrl("../icons/" + Catalog.meta(providerItem.providerId).icon)
+                        sourceSize: Qt.size(compactRoot.iconSide * 2, compactRoot.iconSide * 2)
+                        fillMode: Image.PreserveAspectFit
+                    }
+                }
+
                 PlasmaComponents3.Label {
+                    // Logo mode labels always belong to one real provider;
+                    // do not present the empty fallback as a merged value.
                     visible: Plasmoid.configuration.showPercentInPanel
+                             && (!compactRoot.iconOnly || providerItem.providerId !== "__merged__")
                     Layout.alignment: Qt.AlignVCenter
                     font.pixelSize: Math.max(9, Math.round(compactRoot.iconSide * 0.62))
                     text: {
