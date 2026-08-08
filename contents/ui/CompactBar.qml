@@ -18,10 +18,9 @@ MouseArea {
     readonly property bool vertical: Plasmoid.formFactor === PlasmaCore.Types.Vertical
     readonly property bool separate: Plasmoid.configuration.separateIcons
     readonly property string configuredDisplayMode: Plasmoid.configuration.panelDisplayMode || ""
-    readonly property string displayMode: configuredDisplayMode !== ""
-                                                  ? configuredDisplayMode
-                                                  : (Plasmoid.configuration.iconOnlyInPanel
-                                                     ? "logos" : "meters")
+    readonly property string displayMode: configuredDisplayMode === "logos"
+                                          || configuredDisplayMode === "logos-and-meters"
+                                          ? configuredDisplayMode : "meters"
     readonly property bool showsLogos: displayMode === "logos"
                                                || displayMode === "logos-and-meters"
     readonly property bool showsMeters: displayMode === "meters"

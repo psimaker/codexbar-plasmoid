@@ -11,7 +11,6 @@ KCM.SimpleKCM {
     property alias cfg_showPercentInPanel: showPercent.checked
     property alias cfg_separateIcons: separateIcons.checked
     property string cfg_panelDisplayMode
-    property bool cfg_iconOnlyInPanel
     property alias cfg_hideCritters: hideCritters.checked
     property alias cfg_showCost: showCost.checked
     property alias cfg_showStatus: showStatus.checked
@@ -26,7 +25,6 @@ KCM.SimpleKCM {
     onCfg_panelPercentSourceChanged: sourceCombo.sync()
     onCfg_percentStyleChanged: styleCombo.sync()
     onCfg_panelDisplayModeChanged: displayModeCombo.sync()
-    onCfg_iconOnlyInPanelChanged: displayModeCombo.sync()
 
     Kirigami.FormLayout {
 
@@ -60,16 +58,11 @@ KCM.SimpleKCM {
             function sync() {
                 var mode = page.cfg_panelDisplayMode
                 if (page.displayModeValues.indexOf(mode) < 0)
-                    mode = page.cfg_iconOnlyInPanel ? "logos" : "meters"
+                    mode = "meters"
                 currentIndex = page.displayModeValues.indexOf(mode)
             }
             Component.onCompleted: sync()
-            onActivated: {
-                page.cfg_panelDisplayMode = page.displayModeValues[currentIndex]
-                // Preserve a useful fallback for versions that only know the
-                // original Boolean logo-mode setting.
-                page.cfg_iconOnlyInPanel = currentIndex !== 0
-            }
+            onActivated: page.cfg_panelDisplayMode = page.displayModeValues[currentIndex]
         }
 
         QQC2.CheckBox {

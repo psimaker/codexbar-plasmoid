@@ -26,9 +26,6 @@
         <entry name="separateIcons" type="Bool">
             <default>false</default>
         </entry>
-        <entry name="iconOnlyInPanel" type="Bool">
-            <default>false</default>
-        </entry>
         <entry name="panelDisplayMode" type="String">
             <default></default>
         </entry>
