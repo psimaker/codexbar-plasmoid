@@ -27,7 +27,7 @@
             <default>false</default>
         </entry>
         <entry name="panelDisplayMode" type="String">
-            <default></default>
+            <default>meters</default>
         </entry>
         <entry name="showCost" type="Bool">
             <default>true</default>
