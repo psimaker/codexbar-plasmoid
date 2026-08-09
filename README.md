@@ -74,7 +74,10 @@ The widget validates schema version 1 and retains only account slot, optional
 optional model-scoped weekly windows, and optional pay-as-you-go `spend`
 (`used`/`limit`/`pct`/`currency`), which only the adapter can report per
 account. When present, identity is displayed as `alias`, then
-`organizationName`, then email.
+`organizationName`, then email. The optional `isOrganization` boolean (set from
+whether the account has an organization, without exposing its uuid) only adds
+a `Personal`/`Organization` tag when `organizationName` is empty — an org
+account with an unresolved name is still told apart from a personal one.
 Each account row may optionally report `usageFetchedAt` (ISO 8601 timestamp) or
 `usageAgeSeconds` (non-negative seconds); when present, the card timestamp and
 staleness reflect measurement time rather than poll time, so cached usage is

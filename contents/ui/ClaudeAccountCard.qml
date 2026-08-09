@@ -65,6 +65,16 @@ ColumnLayout {
 
         Item { Layout.fillWidth: true }
 
+        // Only appears when organizationName is empty, so this never doubles
+        // up with an org name already shown by displayLabel.
+        PlasmaComponents3.Label {
+            readonly property string tag: ClaudeAccounts.organizationTag(card.account)
+            visible: tag !== ""
+            text: tag
+            opacity: 0.5
+            font: Kirigami.Theme.smallFont
+        }
+
         PlasmaComponents3.Label {
             text: card.account ? card.account.displayLabel : ""
             opacity: 0.65

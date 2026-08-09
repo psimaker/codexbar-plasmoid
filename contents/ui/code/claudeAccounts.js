@@ -275,10 +275,18 @@ function parseList(text, nowMs) {
         var organizationName = optionalText(row, "organizationName")
         var alias = optionalText(row, "alias")
         var displayLabel = alias || organizationName || email
+        // Additive: claude-swap sets this from whether the account has an
+        // organization uuid, without exposing the uuid itself. organizationName
+        // already carries the org's name when known, so this only adds
+        // information when the name is absent — an org account whose name a
+        // compatible adapter could not resolve is still worth telling apart
+        // from a personal one instead of silently falling back to email.
+        var isOrganization = typeof row.isOrganization === "boolean" ? row.isOrganization : null
         var account = {
             number: row.number,
             email: email,
             organizationName: organizationName,
+            isOrganization: isOrganization,
             alias: alias,
             displayLabel: displayLabel !== "" ? displayLabel : "Account " + row.number,
             active: row.active,
@@ -413,6 +421,16 @@ function canActivate(account) {
     if (!account || account.active)
         return false
     return SWITCHABLE_STATUSES.indexOf(account.usageStatus) >= 0
+}
+
+// Only adds a tag when organizationName is empty and isOrganization was
+// reported: an org account whose name is unresolvable still shouldn't read as
+// personal, and claude-swap's own displays use exactly this org-name-or-
+// "personal" tag once the name is missing (see its _get_display_tag).
+function organizationTag(account) {
+    if (!account || account.organizationName || account.isOrganization === null)
+        return ""
+    return account.isOrganization ? "Organization" : "Personal"
 }
 
 function statusError(account) {
