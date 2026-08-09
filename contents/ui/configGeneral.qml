@@ -10,6 +10,7 @@ KCM.SimpleKCM {
     property alias cfg_refreshIntervalMinutes: refreshSpin.value
     property alias cfg_showPercentInPanel: showPercent.checked
     property alias cfg_separateIcons: separateIcons.checked
+    property string cfg_panelDisplayMode
     property alias cfg_hideCritters: hideCritters.checked
     property alias cfg_showCost: showCost.checked
     property alias cfg_showStatus: showStatus.checked
@@ -19,9 +20,11 @@ KCM.SimpleKCM {
 
     readonly property var sourceValues: ["session", "weekly", "lowest"]
     readonly property var styleValues: ["remaining", "used"]
+    readonly property var displayModeValues: ["meters", "logos", "logos-and-meters"]
 
     onCfg_panelPercentSourceChanged: sourceCombo.sync()
     onCfg_percentStyleChanged: styleCombo.sync()
+    onCfg_panelDisplayModeChanged: displayModeCombo.sync()
 
     Kirigami.FormLayout {
 
@@ -46,16 +49,34 @@ KCM.SimpleKCM {
 
         Item { Kirigami.FormData.isSection: true }
 
+        QQC2.ComboBox {
+            id: displayModeCombo
+            Kirigami.FormData.label: i18n("Panel display:")
+            model: [i18n("Meters / critters"),
+                    i18n("Provider logos"),
+                    i18n("Provider logos + meters")]
+            function sync() {
+                var mode = page.cfg_panelDisplayMode
+                if (page.displayModeValues.indexOf(mode) < 0)
+                    mode = "meters"
+                currentIndex = page.displayModeValues.indexOf(mode)
+            }
+            Component.onCompleted: sync()
+            onActivated: page.cfg_panelDisplayMode = page.displayModeValues[currentIndex]
+        }
+
         QQC2.CheckBox {
             id: separateIcons
-            Kirigami.FormData.label: i18n("Panel:")
-            text: i18n("One icon per provider (default: one merged icon)")
+            text: i18n("One meter per provider (default: one merged meter)")
+            enabled: displayModeCombo.currentIndex === 0
         }
 
         QQC2.CheckBox {
             id: showPercent
             text: i18n("Show percentage next to the icon")
         }
+
+        Item { Kirigami.FormData.isSection: true }
 
         QQC2.ComboBox {
             id: sourceCombo
