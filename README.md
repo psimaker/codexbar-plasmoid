@@ -74,10 +74,19 @@ the 5-hour/7-day usage windows, and optional model-scoped weekly windows. When
 present, identity is displayed as `alias`, then `organizationName`, then email.
 Each account row may optionally report `usageFetchedAt` (ISO 8601 timestamp) or
 `usageAgeSeconds` (non-negative seconds); when present, the card timestamp and
-staleness reflect measurement time rather than poll time, so cached or
-last-known usage is shown as stale instead of fresh. It does not read
-credentials or profile IDs.
-Account switches are serialized and only run after an explicit click.
+staleness reflect measurement time rather than poll time, so cached usage is
+shown as stale instead of fresh. When a live fetch fails, a row may instead
+carry `lastGoodUsage` with `lastGoodFetchedAt`/`lastGoodAgeSeconds`; those
+windows go through the same strict projection, are timestamped from the
+last-good measurement, and are labelled `last known` instead of being shown as
+current. It does not read credentials or profile IDs.
+
+Account switches are serialized and only run after an explicit click. The
+switch action is offered for the `ok`, `api_key`, `unavailable`,
+`token_expired`, and `foreign_credential` statuses — the last two because an
+explicit switch is what refreshes an expired token or replaces a credential
+belonging to another account. `keychain_unavailable`, `no_credentials`, and
+`relogin_required` instead report what has to be fixed outside the widget.
 
 Examples:
 

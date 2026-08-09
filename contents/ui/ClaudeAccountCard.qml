@@ -18,17 +18,24 @@ ColumnLayout {
     readonly property string accountError: ClaudeAccounts.statusError(account)
     readonly property bool switching: plasmoidRoot.claudeSwitchInFlight
                                       && plasmoidRoot.claudeSwitchingSlot === account.number
+    // The adapter serves last-known windows once a live fetch fails. They are
+    // display-only, so they are drawn but never presented as current.
+    readonly property bool lastKnownUsage: !!account && account.usageIsLastGood === true
+    readonly property bool hasUsage: !!account
+                                     && (account.usageStatus === "ok" || lastKnownUsage)
 
     spacing: Kirigami.Units.smallSpacing
 
     function sections() {
         plasmoidRoot.rev
         var out = []
-        if (account && account.usageStatus === "ok" && account.fiveHour)
+        if (!hasUsage)
+            return out
+        if (account.fiveHour)
             out.push({ title: "Session", win: account.fiveHour, minutes: 300 })
-        if (account && account.usageStatus === "ok" && account.sevenDay)
+        if (account.sevenDay)
             out.push({ title: "Weekly", win: account.sevenDay, minutes: 10080 })
-        if (account && account.usageStatus === "ok" && account.scoped) {
+        if (account.scoped) {
             for (var i = 0; i < account.scoped.length; i++) {
                 var scoped = account.scoped[i]
                 out.push({ title: scoped.name, win: scoped, minutes: 10080 })
@@ -72,6 +79,8 @@ ColumnLayout {
                     return ""
                 var updated = Catalog.updatedText(new Date(measuredAt).toISOString(),
                                                   card.plasmoidRoot.nowMs)
+                if (card.lastKnownUsage)
+                    return updated + i18n(" · last known")
                 return card.plasmoidRoot.isClaudeAccountStale(card.account)
                     ? updated + i18n(" · stale") : updated
             }
@@ -111,6 +120,15 @@ ColumnLayout {
     Item {
         visible: card.sections().length > 0
         Layout.preferredHeight: Kirigami.Units.smallSpacing
+    }
+
+    PlasmaComponents3.Label {
+        Layout.fillWidth: true
+        visible: card.lastKnownUsage && card.sections().length > 0
+        text: i18n("Last known usage — not current")
+        opacity: 0.7
+        font: Kirigami.Theme.smallFont
+        wrapMode: Text.WordWrap
     }
 
     Repeater {
@@ -154,9 +172,13 @@ ColumnLayout {
 
             PlasmaComponents3.Label {
                 visible: text !== ""
-                text: Catalog.paceLine(null, section.modelData.win,
-                                       section.modelData.minutes,
-                                       card.plasmoidRoot.nowMs, "claude")
+                // Pace weighs used percent against elapsed window time, so a
+                // last-known measurement would be scored against the wrong
+                // clock and read as behind pace.
+                text: card.lastKnownUsage ? ""
+                                          : Catalog.paceLine(null, section.modelData.win,
+                                                             section.modelData.minutes,
+                                                             card.plasmoidRoot.nowMs, "claude")
                 opacity: 0.55
                 font: Kirigami.Theme.smallFont
                 Layout.fillWidth: true

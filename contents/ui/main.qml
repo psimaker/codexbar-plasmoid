@@ -231,6 +231,10 @@ PlasmoidItem {
         rev
         if (!claudeAccountData.valid)
             return true
+        // Last-known windows are served because the live fetch failed, so they
+        // are non-current regardless of how recently they were measured.
+        if (account && account.usageIsLastGood === true)
+            return true
         var ts = (account && typeof account.usageMeasuredAt === "number")
             ? account.usageMeasuredAt : claudeAccountData.fetchedAt
         if (!ts)

@@ -139,25 +139,33 @@ function parseScopedWindows(raw) {
 
 // Optional per-account usage freshness. schema-v1 adapters may report when
 // each account's usage was measured so cached or last-known values are not
-// shown as fresh. usageFetchedAt (ISO 8601) wins; usageAgeSeconds (non-negative
-// seconds) is measured back from the poll time. Absent or malformed values
-// yield null, which makes the card fall back to the dataset poll timestamp.
-function parseUsageMeasuredAt(row, nowMs) {
-    if (hasOwn(row, "usageFetchedAt") && row.usageFetchedAt !== null) {
-        if (typeof row.usageFetchedAt === "string" && row.usageFetchedAt.trim() !== "") {
-            var ms = Date.parse(row.usageFetchedAt)
+// shown as fresh. The ISO 8601 timestamp wins; the non-negative age in seconds
+// is measured back from the poll time. Absent or malformed values yield null,
+// which makes the card fall back to the dataset poll timestamp.
+function parseMeasuredAt(row, nowMs, timestampKey, ageSecondsKey) {
+    if (hasOwn(row, timestampKey) && row[timestampKey] !== null) {
+        if (typeof row[timestampKey] === "string" && row[timestampKey].trim() !== "") {
+            var ms = Date.parse(row[timestampKey])
             if (!isNaN(ms))
                 return ms
         }
         return null
     }
-    if (hasOwn(row, "usageAgeSeconds") && row.usageAgeSeconds !== null) {
-        if (typeof row.usageAgeSeconds === "number" && isFinite(row.usageAgeSeconds)
-                && row.usageAgeSeconds >= 0)
-            return nowMs - Math.floor(row.usageAgeSeconds * 1000)
+    if (hasOwn(row, ageSecondsKey) && row[ageSecondsKey] !== null) {
+        if (typeof row[ageSecondsKey] === "number" && isFinite(row[ageSecondsKey])
+                && row[ageSecondsKey] >= 0)
+            return nowMs - Math.floor(row[ageSecondsKey] * 1000)
         return null
     }
     return null
+}
+
+// A live measurement is stamped with usageFetchedAt/usageAgeSeconds; the
+// last-known fallback carries the same pair renamed for lastGoodUsage.
+function parseUsageMeasuredAt(row, nowMs, usageIsLastGood) {
+    return usageIsLastGood
+        ? parseMeasuredAt(row, nowMs, "lastGoodFetchedAt", "lastGoodAgeSeconds")
+        : parseMeasuredAt(row, nowMs, "usageFetchedAt", "usageAgeSeconds")
 }
 
 function parseList(text, nowMs) {
@@ -197,11 +205,20 @@ function parseList(text, nowMs) {
         if (typeof row.usageStatus !== "string")
             return { ok: false, error: "Account " + row.number + " has no usageStatus." }
 
-        var usage = isObject(row.usage) ? row.usage : {}
-        var fiveHour = parseWindow(usage.fiveHour, row.number, "five-hour")
+        // A schema-v1 row carries either a live `usage` object or, once a fetch
+        // fails, a display-grade `lastGoodUsage` fallback in the same shape with
+        // its own measurement timestamps. Project both through the one strict
+        // window parser so cached windows are shown as non-current rather than
+        // dropped, and never let a fallback masquerade as a live measurement.
+        var live = isObject(row.usage) ? row.usage : null
+        var lastGood = live === null && isObject(row.lastGoodUsage) ? row.lastGoodUsage : null
+        var usageIsLastGood = lastGood !== null
+        var usage = live || lastGood || {}
+        var windowLabel = usageIsLastGood ? "last-known " : ""
+        var fiveHour = parseWindow(usage.fiveHour, row.number, windowLabel + "five-hour")
         if (!fiveHour.ok)
             return fiveHour
-        var sevenDay = parseWindow(usage.sevenDay, row.number, "seven-day")
+        var sevenDay = parseWindow(usage.sevenDay, row.number, windowLabel + "seven-day")
         if (!sevenDay.ok)
             return sevenDay
 
@@ -223,7 +240,8 @@ function parseList(text, nowMs) {
             fiveHour: fiveHour.value,
             sevenDay: sevenDay.value,
             scoped: parseScopedWindows(usage.scoped),
-            usageMeasuredAt: parseUsageMeasuredAt(row, nowMs)
+            usageIsLastGood: usageIsLastGood,
+            usageMeasuredAt: parseUsageMeasuredAt(row, nowMs, usageIsLastGood)
         }
         if (row.active)
             activeSlots.push(row.number)
@@ -281,11 +299,18 @@ function parseSwitch(text, requestedSlot) {
     return { ok: true, value: { switched: object.switched, reason: object.reason } }
 }
 
+// Statuses an explicit switch can act on. "unavailable" only means the usage
+// fetch failed, and both credential faults below are what a switch repairs:
+// switching refreshes an expired token, and it stashes a foreign credential
+// before restoring the slot's own. The remaining statuses need the user to
+// re-login or unlock a keychain first, so they stay non-actionable here
+// instead of offering a button that cannot succeed.
+var SWITCHABLE_STATUSES = ["ok", "api_key", "unavailable", "token_expired", "foreign_credential"]
+
 function canActivate(account) {
     if (!account || account.active)
         return false
-    return account.usageStatus === "ok" || account.usageStatus === "api_key"
-        || account.usageStatus === "unavailable"
+    return SWITCHABLE_STATUSES.indexOf(account.usageStatus) >= 0
 }
 
 function statusError(account) {
@@ -297,7 +322,11 @@ function statusError(account) {
             || (account.scoped && account.scoped.length > 0)
             ? "" : "No usage windows reported."
     case "token_expired":
-        return "Token expired. Switch to this account in the adapter to refresh it."
+        return "Token expired. Switch to this account to refresh it."
+    case "foreign_credential":
+        return "The stored credential belongs to another account. Switch to this account to repair it."
+    case "relogin_required":
+        return "The stored login is no longer valid. Re-login with the adapter to restore this account."
     case "api_key":
         return "API-key account; subscription usage is unavailable."
     case "keychain_unavailable":
