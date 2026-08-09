@@ -1,27 +1,19 @@
 import QtQuick
-import QtQuick.Effects
+import org.kde.ksvg as KSvg
 
-// The original provider SVGs are white — tint them like the macOS app
-// tints its template icons.
+// Provider SVGs use Plasma's ColorScheme-Text convention for themeable
+// monochrome artwork. KSvg resolves that color once through Plasma's SVG
+// cache while leaving intentional provider accent colors unchanged.
 Item {
     id: iconRoot
 
     property string iconFile: ""
-    property color tint: "white"
 
-    Image {
-        id: img
+    KSvg.SvgItem {
         anchors.fill: parent
-        source: iconRoot.iconFile !== "" ? Qt.resolvedUrl("../icons/" + iconRoot.iconFile) : ""
-        sourceSize: Qt.size(width * 2, height * 2)
-        fillMode: Image.PreserveAspectFit
-        visible: false
-    }
-
-    MultiEffect {
-        anchors.fill: img
-        source: img
-        colorization: 1.0
-        colorizationColor: iconRoot.tint
+        svg: KSvg.Svg {
+            imagePath: iconRoot.iconFile !== ""
+                       ? Qt.resolvedUrl("../icons/" + iconRoot.iconFile) : ""
+        }
     }
 }

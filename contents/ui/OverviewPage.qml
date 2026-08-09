@@ -53,7 +53,6 @@ ColumnLayout {
 
                 ProviderIconImage {
                     iconFile: overviewRow.meta.icon
-                    tint: Kirigami.Theme.textColor
                     Layout.preferredWidth: Kirigami.Units.iconSizes.smallMedium
                     Layout.preferredHeight: Kirigami.Units.iconSizes.smallMedium
                 }

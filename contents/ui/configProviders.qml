@@ -60,18 +60,16 @@ KCM.SimpleKCM {
                     onToggled: page.setEnabled(row.modelData, checked)
                 }
 
-                Image {
-                    source: Qt.resolvedUrl("../icons/" + Catalog.meta(row.modelData).icon)
-                    sourceSize: Qt.size(32, 32)
+                ProviderIconImage {
+                    iconFile: Catalog.meta(row.modelData).icon
                     Layout.preferredWidth: Kirigami.Units.iconSizes.small
                     Layout.preferredHeight: Kirigami.Units.iconSizes.small
-                    fillMode: Image.PreserveAspectFit
 
                     Rectangle {
                         anchors.fill: parent
                         z: -1
                         radius: 4
-                        color: Catalog.meta(row.modelData).color
+                        color: Catalog.logoBackgroundColor(row.modelData)
                     }
                 }
 
