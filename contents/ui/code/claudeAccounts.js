@@ -236,6 +236,11 @@ function parseList(text, nowMs) {
             alias: alias,
             displayLabel: displayLabel !== "" ? displayLabel : "Account " + row.number,
             active: row.active,
+            // Additive schema-v1 flag, emitted only for slots the user held
+            // out of automatic rotation. Such a slot stays a valid explicit
+            // switch target, so this is display-only and never gates the
+            // switch action.
+            disabled: row.disabled === true,
             usageStatus: row.usageStatus,
             fiveHour: fiveHour.value,
             sevenDay: sevenDay.value,

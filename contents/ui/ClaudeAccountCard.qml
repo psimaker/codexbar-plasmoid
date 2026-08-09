@@ -90,6 +90,16 @@ ColumnLayout {
             elide: Text.ElideRight
         }
 
+        // Held out of the adapter's automatic rotation. Naming the effect
+        // rather than the `disabled` flag keeps this from reading as a broken
+        // or unusable account — the slot still works and stays switchable.
+        PlasmaComponents3.Label {
+            visible: card.account && card.account.disabled === true
+            text: i18n("Not in rotation")
+            color: Kirigami.Theme.neutralTextColor
+            font: Kirigami.Theme.smallFont
+        }
+
         PlasmaComponents3.Label {
             visible: card.account && card.account.active
             text: i18n("Active")

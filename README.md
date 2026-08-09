@@ -69,9 +69,10 @@ operations:
 ```
 
 The widget validates schema version 1 and retains only account slot, optional
-`alias`/`organizationName`/email display identity, active state, usage status,
-the 5-hour/7-day usage windows, and optional model-scoped weekly windows. When
-present, identity is displayed as `alias`, then `organizationName`, then email.
+`alias`/`organizationName`/email display identity, active state, the optional
+`disabled` rotation flag, usage status, the 5-hour/7-day usage windows, and
+optional model-scoped weekly windows. When present, identity is displayed as
+`alias`, then `organizationName`, then email.
 Each account row may optionally report `usageFetchedAt` (ISO 8601 timestamp) or
 `usageAgeSeconds` (non-negative seconds); when present, the card timestamp and
 staleness reflect measurement time rather than poll time, so cached usage is
@@ -86,7 +87,10 @@ switch action is offered for the `ok`, `api_key`, `unavailable`,
 `token_expired`, and `foreign_credential` statuses — the last two because an
 explicit switch is what refreshes an expired token or replaces a credential
 belonging to another account. `keychain_unavailable`, `no_credentials`, and
-`relogin_required` instead report what has to be fixed outside the widget.
+`relogin_required` instead report what has to be fixed outside the widget. A
+`disabled` slot is only held out of the adapter's automatic rotation and stays
+a valid explicit target, so the card labels it `Not in rotation` without
+withdrawing the switch action.
 
 Examples:
 
