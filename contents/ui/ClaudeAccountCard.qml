@@ -26,6 +26,15 @@ ColumnLayout {
 
     spacing: Kirigami.Units.smallSpacing
 
+    // Catalog.money renders the widget's usual "$ 1.20". An adapter reporting
+    // any other currency gets its code appended rather than a wrong symbol.
+    function moneyText(value, currency) {
+        if (typeof value !== "number" || !isFinite(value))
+            return ""
+        return (currency === "" || currency === "USD")
+            ? Catalog.money(value) : value.toFixed(2) + " " + currency
+    }
+
     function sections() {
         plasmoidRoot.rev
         var out = []
@@ -182,13 +191,20 @@ ColumnLayout {
 
             PlasmaComponents3.Label {
                 visible: text !== ""
-                // Pace weighs used percent against elapsed window time, so a
+                // Prefer the adapter's own pace verdict; only fall back to the
+                // local reconstruction when it reports none. Either way, pace
+                // weighs used percent against elapsed window time, so a
                 // last-known measurement would be scored against the wrong
                 // clock and read as behind pace.
-                text: card.lastKnownUsage ? ""
-                                          : Catalog.paceLine(null, section.modelData.win,
-                                                             section.modelData.minutes,
-                                                             card.plasmoidRoot.nowMs, "claude")
+                text: {
+                    if (card.lastKnownUsage)
+                        return ""
+                    var reported = ClaudeAccounts.paceText(section.modelData.win)
+                    return reported !== "" ? reported
+                                           : Catalog.paceLine(null, section.modelData.win,
+                                                              section.modelData.minutes,
+                                                              card.plasmoidRoot.nowMs, "claude")
+                }
                 opacity: 0.55
                 font: Kirigami.Theme.smallFont
                 Layout.fillWidth: true
@@ -197,5 +213,51 @@ ColumnLayout {
 
             Item { Layout.preferredHeight: Kirigami.Units.smallSpacing }
         }
+    }
+
+    // Pay-as-you-go spend, which only the adapter can report per account: the
+    // CodexBar CLI sees the cost of whichever account is currently active.
+    ColumnLayout {
+        id: spendSection
+        readonly property var spend: card.hasUsage && card.account.spend ? card.account.spend : null
+        visible: spend !== null
+        Layout.fillWidth: true
+        spacing: Math.round(Kirigami.Units.smallSpacing * 0.8)
+
+        PlasmaComponents3.Label {
+            text: i18n("Spend")
+            font.weight: Font.DemiBold
+            font.pointSize: Kirigami.Theme.defaultFont.pointSize * 1.05
+        }
+
+        UsageBar {
+            Layout.fillWidth: true
+            percent: Catalog.windowBarPercent(spendSection.spend)
+            fillColor: card.brandColor
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+
+            PlasmaComponents3.Label {
+                text: spendSection.spend
+                      ? i18n("%1 of %2",
+                             card.moneyText(spendSection.spend.used, spendSection.spend.currency),
+                             card.moneyText(spendSection.spend.limit, spendSection.spend.currency))
+                      : ""
+                opacity: 0.75
+                font: Kirigami.Theme.smallFont
+                Layout.fillWidth: true
+                elide: Text.ElideRight
+            }
+
+            PlasmaComponents3.Label {
+                text: Catalog.resetText(spendSection.spend, card.plasmoidRoot.nowMs)
+                opacity: 0.6
+                font: Kirigami.Theme.smallFont
+            }
+        }
+
+        Item { Layout.preferredHeight: Kirigami.Units.smallSpacing }
     }
 }

@@ -62,6 +62,7 @@ PlasmoidItem {
         loading: false,
         error: "",
         switchError: "",
+        switchWarnings: [],
         fetchedAt: 0
     })
     property var pendingClaudeList: ({})
@@ -162,6 +163,7 @@ PlasmoidItem {
             loading: false,
             error: "",
             switchError: "",
+            switchWarnings: [],
             fetchedAt: 0
         }
         bump()
@@ -218,7 +220,7 @@ PlasmoidItem {
             return
         claudeSwitchInFlight = true
         claudeSwitchingSlot = slot
-        updateClaudeAccountData({ switchError: "" })
+        updateClaudeAccountData({ switchError: "", switchWarnings: [] })
         pendingClaudeSwitch[cmd] = { adapterGen: claudeAdapterGen, slot: slot }
         executable.connectSource(cmd)
     }
@@ -379,9 +381,13 @@ PlasmoidItem {
             claudeSwitchingSlot = 0
             if (switchReq.adapterGen === claudeAdapterGen) {
                 var parsedSwitch = ClaudeAccounts.parseSwitch(stdout, switchReq.slot)
+                // Adapter warnings ride along with both outcomes: a switch can
+                // report success and still warn that a credential needs repair.
                 updateClaudeAccountData({
                     switchError: parsedSwitch.ok ? ""
-                        : claudeAdapterErrorText(exitCode, parsedSwitch.error)
+                        : claudeAdapterErrorText(exitCode, parsedSwitch.error),
+                    switchWarnings: parsedSwitch.ok ? parsedSwitch.value.warnings
+                                                    : (parsedSwitch.warnings || [])
                 })
             } else {
                 bump()

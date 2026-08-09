@@ -83,7 +83,21 @@ function schemaError(object) {
     return ""
 }
 
-function parseWindow(raw, slot, name) {
+// Weekly windows (sevenDay and scoped, never fiveHour) additively carry the
+// adapter's own pace verdict. Reading it beats recomputing one locally: the
+// adapter measures against the real fetch time and applies its own suppression
+// rules for the first day or so of the week. Its projected-exhaustion fields
+// are deliberately not read — claude-swap keeps that linear extrapolation out
+// of every human surface because the error bars are too wide to state as fact.
+function parsePace(raw) {
+    return {
+        expectedPct: (typeof raw.expectedPct === "number" && isFinite(raw.expectedPct))
+            ? Math.max(0, Math.min(100, raw.expectedPct)) : null,
+        aheadOfPace: typeof raw.aheadOfPace === "boolean" ? raw.aheadOfPace : null
+    }
+}
+
+function parseWindow(raw, slot, name, weekly) {
     if (raw === undefined || raw === null)
         return { ok: true, value: null }
     if (!isObject(raw))
@@ -99,13 +113,42 @@ function parseWindow(raw, slot, name) {
             return { ok: false, error: "Account " + slot + " has an invalid " + name + " reset timestamp." }
         resetsAt = raw.resetsAt
     }
+    var pace = weekly === true ? parsePace(raw) : { expectedPct: null, aheadOfPace: null }
     return {
         ok: true,
         value: {
             usedPercent: Math.max(0, Math.min(100, raw.pct)),
             resetsAt: resetsAt,
+            expectedPct: pace.expectedPct,
+            aheadOfPace: pace.aheadOfPace,
             usageKnown: true
         }
+    }
+}
+
+// usage.spend is additive schema-v1 pay-as-you-go data, and per-account: the
+// CodexBar CLI can only report cost for whichever account is currently active.
+// Malformed values are ignored rather than fatal, matching parseScopedWindows,
+// so an unfamiliar spend shape cannot suppress the usage windows next to it.
+function parseSpend(raw) {
+    if (!isObject(raw))
+        return null
+    if (typeof raw.pct !== "number" || !isFinite(raw.pct)
+            || typeof raw.used !== "number" || !isFinite(raw.used)
+            || typeof raw.limit !== "number" || !isFinite(raw.limit))
+        return null
+    var resetsAt = null
+    if (hasOwn(raw, "resetsAt") && raw.resetsAt !== null
+            && typeof raw.resetsAt === "string" && raw.resetsAt.trim() !== ""
+            && !isNaN(Date.parse(raw.resetsAt)))
+        resetsAt = raw.resetsAt
+    return {
+        used: raw.used,
+        limit: raw.limit,
+        currency: typeof raw.currency === "string" ? raw.currency.trim() : "",
+        usedPercent: Math.max(0, Math.min(100, raw.pct)),
+        resetsAt: resetsAt,
+        usageKnown: true
     }
 }
 
@@ -127,10 +170,13 @@ function parseScopedWindows(raw) {
                 continue
             resetsAt = row.resetsAt
         }
+        var pace = parsePace(row)
         windows.push({
             name: row.name.trim(),
             usedPercent: Math.max(0, Math.min(100, row.pct)),
             resetsAt: resetsAt,
+            expectedPct: pace.expectedPct,
+            aheadOfPace: pace.aheadOfPace,
             usageKnown: true
         })
     }
@@ -215,10 +261,10 @@ function parseList(text, nowMs) {
         var usageIsLastGood = lastGood !== null
         var usage = live || lastGood || {}
         var windowLabel = usageIsLastGood ? "last-known " : ""
-        var fiveHour = parseWindow(usage.fiveHour, row.number, windowLabel + "five-hour")
+        var fiveHour = parseWindow(usage.fiveHour, row.number, windowLabel + "five-hour", false)
         if (!fiveHour.ok)
             return fiveHour
-        var sevenDay = parseWindow(usage.sevenDay, row.number, windowLabel + "seven-day")
+        var sevenDay = parseWindow(usage.sevenDay, row.number, windowLabel + "seven-day", true)
         if (!sevenDay.ok)
             return sevenDay
 
@@ -245,6 +291,7 @@ function parseList(text, nowMs) {
             fiveHour: fiveHour.value,
             sevenDay: sevenDay.value,
             scoped: parseScopedWindows(usage.scoped),
+            spend: parseSpend(usage.spend),
             usageIsLastGood: usageIsLastGood,
             usageMeasuredAt: parseUsageMeasuredAt(row, nowMs, usageIsLastGood)
         }
@@ -270,6 +317,34 @@ function parseList(text, nowMs) {
             accounts: accounts
         }
     }
+}
+
+var MAX_SWITCH_WARNINGS = 6
+
+// A schema-v1 switch result carries warnings that exist nowhere else: in --json
+// mode the adapter routes them into the payload instead of stderr, and they
+// report credential damage the user has to act on (live tokens wiped by Claude
+// Code, a foreign credential left in place, a session-mode instance racing the
+// default login). A switch can report switched: true and still warn, so these
+// are surfaced independently of the success path.
+function parseWarnings(raw) {
+    if (!Array.isArray(raw))
+        return []
+    var warnings = []
+    var dropped = 0
+    for (var i = 0; i < raw.length; i++) {
+        if (typeof raw[i] !== "string" || raw[i].trim() === "")
+            continue
+        if (warnings.length >= MAX_SWITCH_WARNINGS) {
+            dropped++
+            continue
+        }
+        warnings.push(raw[i].trim())
+    }
+    // Say what was held back rather than truncating a credential warning away.
+    if (dropped > 0)
+        warnings.push(dropped + " more adapter warning(s) not shown.")
+    return warnings
 }
 
 function parseSwitch(text, requestedSlot) {
@@ -299,9 +374,31 @@ function parseSwitch(text, requestedSlot) {
     if (object.to.number !== requestedSlot)
         return { ok: false, error: "The Claude account adapter reported slot " + object.to.number
                     + " after slot " + requestedSlot + " was requested." }
+    var warnings = parseWarnings(object.warnings)
     if (!object.switched && object.reason !== "already-active")
-        return { ok: false, error: "Account switch did not complete (" + object.reason + ")." }
-    return { ok: true, value: { switched: object.switched, reason: object.reason } }
+        return {
+            ok: false,
+            error: "Account switch did not complete (" + object.reason + ").",
+            warnings: warnings
+        }
+    return {
+        ok: true,
+        value: { switched: object.switched, reason: object.reason, warnings: warnings }
+    }
+}
+
+// The adapter's pace verdict, phrased in the vocabulary the CLI-backed cards
+// already use. There is no exhaustion estimate here on purpose; see parsePace.
+function paceText(win) {
+    if (!win || typeof win.expectedPct !== "number")
+        return ""
+    var delta = win.usedPercent - win.expectedPct
+    var magnitude = Math.round(Math.abs(delta))
+    if (win.aheadOfPace === true)
+        return magnitude > 0 ? "Pace: " + magnitude + "% in deficit" : "Pace: Ahead of pace"
+    if (magnitude === 0 || Math.abs(delta) <= 2)
+        return "Pace: On pace"
+    return "Pace: " + magnitude + "% " + (delta > 0 ? "in deficit" : "in reserve")
 }
 
 // Statuses an explicit switch can act on. "unavailable" only means the usage

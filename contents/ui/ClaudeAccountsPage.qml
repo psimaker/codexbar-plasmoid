@@ -16,6 +16,9 @@ ColumnLayout {
     }
     readonly property var accounts: d.accounts || []
     readonly property bool showAccounts: d.valid && accounts.length > 0
+    // In --json mode the adapter reports switch warnings only in the payload,
+    // never on stderr, so this is the one place they can reach the user.
+    readonly property var switchWarnings: d.switchWarnings || []
 
     spacing: Kirigami.Units.smallSpacing
 
@@ -48,6 +51,32 @@ ColumnLayout {
         opacity: 0.9
         font: Kirigami.Theme.smallFont
         wrapMode: Text.WordWrap
+    }
+
+    PlasmaComponents3.Label {
+        Layout.fillWidth: true
+        visible: page.switchWarnings.length > 0
+        text: page.switchWarnings.length === 1
+            ? i18n("The adapter reported a warning about the last switch:")
+            : i18n("The adapter reported warnings about the last switch:")
+        color: Kirigami.Theme.neutralTextColor
+        opacity: 0.9
+        font: Kirigami.Theme.smallFont
+        wrapMode: Text.WordWrap
+    }
+
+    Repeater {
+        model: page.switchWarnings
+
+        PlasmaComponents3.Label {
+            required property var modelData
+            Layout.fillWidth: true
+            text: "• " + modelData
+            color: Kirigami.Theme.neutralTextColor
+            opacity: 0.9
+            font: Kirigami.Theme.smallFont
+            wrapMode: Text.WordWrap
+        }
     }
 
     PlasmaComponents3.Label {
