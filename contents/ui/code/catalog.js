@@ -44,7 +44,7 @@ var PROVIDERS = {
     "abacusai":     { name: "Abacus AI",          color: "#38BDF8", dashboard: "https://apps.abacus.ai/chatllm/admin/compute-points-usage", status: "", icon: "ProviderIcon-abacus.svg" },
     "mistral":      { name: "Mistral",            color: "#FF500F", dashboard: "https://admin.mistral.ai/organization/usage", status: "", icon: "ProviderIcon-mistral.svg" },
     "deepseek":     { name: "DeepSeek",           color: "#888888", dashboard: "https://platform.deepseek.com/usage", status: "", icon: "ProviderIcon-deepseek.svg" },
-    "codebuff":     { name: "Codebuff",           color: "#44FF00", dashboard: "https://www.codebuff.com/usage", status: "", icon: "ProviderIcon-codebuff.svg" },
+    "codebuff":     { name: "Codebuff",           color: "#44FF00", logoColor: "#44FF00", dashboard: "https://www.codebuff.com/usage", status: "", icon: "ProviderIcon-codebuff.svg" },
     "crof":         { name: "Crof",               color: "#888888", dashboard: "https://crof.ai/dashboard", status: "", icon: "ProviderIcon-crof.svg" },
     "venice":       { name: "Venice",             color: "#888888", dashboard: "https://venice.ai/settings/api", status: "", icon: "ProviderIcon-venice.svg" },
     "commandcode":  { name: "Command Code",       color: "#555555", dashboard: "https://commandcode.ai/studio", status: "", icon: "ProviderIcon-commandcode.svg" },
@@ -68,6 +68,16 @@ var COST_PROVIDERS = ["claude", "codex"]
 
 function meta(id) {
     return PROVIDERS[id] || { name: id, color: "#888888", dashboard: "", status: "", icon: "" }
+}
+
+// A fully colored logo disappears when its intrinsic color exactly matches
+// the catalog-colored chip behind it. Keep that chip transparent instead.
+function logoBackgroundColor(id) {
+    var provider = meta(id)
+    if (provider.logoColor
+            && provider.logoColor.toLowerCase() === provider.color.toLowerCase())
+        return "transparent"
+    return provider.color
 }
 
 function orderedIds() {

@@ -124,14 +124,13 @@ MouseArea {
                         anchors.fill: parent
                         z: -1
                         radius: Kirigami.Units.smallSpacing
-                        color: Catalog.meta(providerItem.providerId).color
+                        color: Catalog.logoBackgroundColor(providerItem.providerId)
                     }
 
-                    Image {
+                    ProviderIconImage {
                         anchors.fill: parent
-                        source: Qt.resolvedUrl("../icons/" + Catalog.meta(providerItem.providerId).icon)
-                        sourceSize: Qt.size(compactRoot.iconSide * 2, compactRoot.iconSide * 2)
-                        fillMode: Image.PreserveAspectFit
+                        iconFile: Catalog.meta(providerItem.providerId).icon
+                        displayContext: ProviderIconImage.ContrastingContext
                     }
                 }
 
