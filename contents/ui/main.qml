@@ -32,6 +32,12 @@ PlasmoidItem {
 
     property var pendingUsage: ({})
     property var pendingCost: ({})
+    property string costRefreshInFlight: ""
+    property string costSourceInFlight: ""
+    property var lastCostAttemptAt: ({})
+    readonly property int costAutoRefreshIntervalMs: 60 * 60 * 1000
+    readonly property int costSchedulerIntervalMs: 5 * 60 * 1000
+    readonly property bool costEnabled: Plasmoid.configuration.showCost
     // Providers whose CLI process died with SIGSEGV are skipped by automatic
     // refreshes. A manual refresh still retries after the CLI was upgraded.
     property var autoRefreshBlocked: ({})
@@ -95,6 +101,63 @@ PlasmoidItem {
         }
     }
 
+    function supportsCost(p) {
+        return Catalog.COST_PROVIDERS.indexOf(p) >= 0
+    }
+
+    function deferAutomaticCostScans() {
+        var attempts = Object.assign({}, lastCostAttemptAt)
+        var now = Date.now()
+        for (var i = 0; i < enabledProviders.length; i++) {
+            var provider = enabledProviders[i]
+            if (supportsCost(provider) && typeof attempts[provider] !== "number")
+                attempts[provider] = now
+        }
+        lastCostAttemptAt = attempts
+    }
+
+    function canRefreshCost(p) {
+        return costEnabled && supportsCost(p)
+            && enabledProviders.indexOf(p) >= 0
+            && costRefreshInFlight === ""
+    }
+
+    function refreshCost(p, force) {
+        if (!canRefreshCost(p))
+            return false
+
+        var now = Date.now()
+        var previousAttempt = lastCostAttemptAt[p]
+        if (force !== true && typeof previousAttempt === "number"
+                && now - previousAttempt < costAutoRefreshIntervalMs)
+            return false
+
+        var attempts = Object.assign({}, lastCostAttemptAt)
+        attempts[p] = now
+        lastCostAttemptAt = attempts
+
+        if (!usageData[p])
+            usageData[p] = {}
+        usageData[p].costLoading = true
+        bump()
+
+        var costCmd = cliCmd("cost --provider " + p + " --json")
+        pendingCost[costCmd] = { p: p }
+        costRefreshInFlight = p
+        costSourceInFlight = costCmd
+        executable.connectSource(costCmd)
+        return true
+    }
+
+    function refreshNextCost() {
+        if (!costEnabled || costRefreshInFlight !== "")
+            return
+        for (var i = 0; i < enabledProviders.length; i++) {
+            if (refreshCost(enabledProviders[i], false))
+                return
+        }
+    }
+
     function refreshProvider(p) {
         if (!usageData[p])
             usageData[p] = {}
@@ -106,12 +169,6 @@ PlasmoidItem {
         var cmd = cliCmd("usage --provider " + p + " --json" + (Plasmoid.configuration.showStatus ? " --status" : ""))
         pendingUsage[cmd] = { p: p, gen: gen }
         executable.connectSource(cmd)
-
-        if (Plasmoid.configuration.showCost && Catalog.COST_PROVIDERS.indexOf(p) >= 0) {
-            var costCmd = cliCmd("cost --provider " + p + " --json")
-            pendingCost[costCmd] = { p: p, gen: gen }
-            executable.connectSource(costCmd)
-        }
     }
 
     function usageErrorText(exitCode, parseFailed) {
@@ -165,20 +222,19 @@ PlasmoidItem {
         var creq = pendingCost[source]
         if (creq !== undefined) {
             delete pendingCost[source]
-            if (requestGen[creq.p] !== creq.gen)
-                return
+            if (costSourceInFlight === source) {
+                costRefreshInFlight = ""
+                costSourceInFlight = ""
+            }
             var dc = usageData[creq.p]
             if (!dc)
                 dc = usageData[creq.p] = {}
+            dc.costLoading = false
             var pc = null
             try { pc = JSON.parse((stdout || "").trim()) } catch (e2) { pc = null }
-            if (pc && pc.length > 0) {
+            if (exitCode === 0 && pc && pc.length > 0) {
                 dc.cost = pc[0]
                 dc.costUpdatedAt = Date.now()
-            } else {
-                // drop stale cost data instead of showing outdated numbers forever
-                dc.cost = null
-                dc.costUpdatedAt = 0
             }
             bump()
         }
@@ -248,8 +304,17 @@ PlasmoidItem {
         onTriggered: root.refreshAll(false)
     }
 
+    Timer {
+        id: costRefreshTimer
+        interval: root.costSchedulerIntervalMs
+        running: root.costEnabled
+        repeat: true
+        onTriggered: root.refreshNextCost()
+    }
+
     Component.onCompleted: {
         currentTab = defaultTab()
+        deferAutomaticCostScans()
         refreshAll(false)
     }
 
@@ -259,7 +324,13 @@ PlasmoidItem {
                 || enabledProviders.indexOf(currentTab) >= 0
         if (!valid)
             currentTab = defaultTab()
+        deferAutomaticCostScans()
         refreshAll(true)
+    }
+
+    onCostEnabledChanged: {
+        if (costEnabled)
+            deferAutomaticCostScans()
     }
 
     onExpandedChanged: {
@@ -272,6 +343,15 @@ PlasmoidItem {
             text: i18n("Refresh")
             icon.name: "view-refresh-symbolic"
             onTriggered: root.refreshAll(true)
+        },
+        PlasmaCore.Action {
+            text: root.costRefreshInFlight === root.currentTab
+                  ? i18n("Refreshing cost history…")
+                  : i18n("Refresh cost history")
+            icon.name: "view-refresh-symbolic"
+            visible: root.costEnabled && root.supportsCost(root.currentTab)
+            enabled: root.canRefreshCost(root.currentTab)
+            onTriggered: root.refreshCost(root.currentTab, true)
         }
     ]
 

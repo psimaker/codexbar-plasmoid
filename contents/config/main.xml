@@ -30,7 +30,7 @@
             <default>meters</default>
         </entry>
         <entry name="showCost" type="Bool">
-            <default>true</default>
+            <default>false</default>
         </entry>
         <entry name="showStatus" type="Bool">
             <default>true</default>

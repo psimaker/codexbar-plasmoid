@@ -115,6 +115,14 @@ KCM.SimpleKCM {
             text: i18n("Show cost section (local token logs)")
         }
 
+        QQC2.Label {
+            Layout.fillWidth: true
+            text: i18n("Cost scans can use significant disk and memory resources. Automatic scans run at most once per hour; use the separate menu action for an immediate scan.")
+            wrapMode: Text.WordWrap
+            opacity: 0.7
+            font: Kirigami.Theme.smallFont
+        }
+
         QQC2.CheckBox {
             id: showStatus
             text: i18n("Show provider status")
