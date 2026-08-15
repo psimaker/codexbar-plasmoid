@@ -12,6 +12,7 @@ ColumnLayout {
 
     required property var plasmoidRoot
     required property string providerId
+    property bool extrasOnly: false
 
     readonly property var meta: Catalog.meta(providerId)
     // shallow-copy so the property change signal fires on every data revision
@@ -103,6 +104,7 @@ ColumnLayout {
 
     // ---- header ----
     RowLayout {
+        visible: !card.extrasOnly
         Layout.fillWidth: true
         spacing: Kirigami.Units.smallSpacing
 
@@ -124,7 +126,7 @@ ColumnLayout {
 
     PlasmaComponents3.Label {
         Layout.fillWidth: true
-        visible: text !== ""
+        visible: !card.extrasOnly && text !== ""
         text: {
             plasmoidRoot.rev
             if (card.d && card.d.loading)
@@ -143,11 +145,14 @@ ColumnLayout {
         wrapMode: Text.WordWrap
     }
 
-    Item { Layout.preferredHeight: Kirigami.Units.smallSpacing }
+    Item {
+        visible: !card.extrasOnly
+        Layout.preferredHeight: Kirigami.Units.smallSpacing
+    }
 
     // ---- rate window sections ----
     Repeater {
-        model: card.sections()
+        model: card.extrasOnly ? [] : card.sections()
 
         ColumnLayout {
             id: section
@@ -202,9 +207,10 @@ ColumnLayout {
     // ---- credits (Codex) ----
     ColumnLayout {
         Layout.fillWidth: true
-        visible: (card.entry && card.entry.credits && card.entry.credits.remaining !== undefined)
-                 || (card.usage && card.usage.codexResetCredits
-                     && card.usage.codexResetCredits.availableCount > 0)
+        visible: !card.extrasOnly
+                 && ((card.entry && card.entry.credits && card.entry.credits.remaining !== undefined)
+                     || (card.usage && card.usage.codexResetCredits
+                         && card.usage.codexResetCredits.availableCount > 0))
         spacing: Math.round(Kirigami.Units.smallSpacing * 0.8)
 
         Rectangle {
@@ -327,7 +333,8 @@ ColumnLayout {
     }
 
     PlasmaComponents3.Label {
-        visible: card.usage && card.usage.identity && card.usage.identity.accountEmail !== undefined
+        visible: !card.extrasOnly && card.usage && card.usage.identity
+                 && card.usage.identity.accountEmail !== undefined
         text: card.usage && card.usage.identity && card.usage.identity.accountEmail
               ? i18n("Account: %1", card.usage.identity.accountEmail) : ""
         opacity: 0.55
