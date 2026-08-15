@@ -233,6 +233,18 @@ Item {
             }
 
             MenuRow {
+                visible: fullRoot.onProviderTab
+                         && Plasmoid.configuration.showCost
+                         && Catalog.COST_PROVIDERS.indexOf(fullRoot.currentTab) >= 0
+                iconName: "view-refresh-symbolic"
+                label: fullRoot.plasmoidRoot.costRefreshInFlight === fullRoot.currentTab
+                       ? i18n("Refreshing cost history…")
+                       : i18n("Refresh cost history")
+                interactive: fullRoot.plasmoidRoot.canRefreshCost(fullRoot.currentTab)
+                onActivated: fullRoot.plasmoidRoot.refreshCost(fullRoot.currentTab, true)
+            }
+
+            MenuRow {
                 visible: fullRoot.currentTab !== "about" && fullRoot.onProviderTab
                 iconName: "view-statistics-symbolic"
                 label: i18n("Usage Dashboard")

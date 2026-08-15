@@ -18,8 +18,10 @@ a faithful re-creation of [CodexBar](https://github.com/steipete/CodexBar)
   rate windows ("Codex Spark", model-scoped weekly caps, …) with progress
   bars, reset countdowns and a pace line, Codex reset credits, cost
   (today / last 30 days from local token logs via `codexbar cost`),
-  provider status and account info.
-- **Actions:** Refresh, Usage Dashboard, Status Page, Settings, About.
+  provider status and account info. Cost scanning is disabled by default
+  because large local histories can be resource-intensive.
+- **Actions:** Refresh, explicit cost-history refresh, Usage Dashboard, Status
+  Page, Settings, About.
 - **Settings:** refresh interval, any of the 58 providers the CLI supports,
   panel percentage (session/weekly/lowest, remaining/used), plain bars,
   cost/status toggles, custom CLI path.
@@ -44,6 +46,13 @@ a faithful re-creation of [CodexBar](https://github.com/steipete/CodexBar)
 
   The CLI reads the credentials of the provider tools you already use
   (Claude Code, Codex CLI, …) — no extra login required.
+
+## Cost refresh behavior
+
+Quota refreshes never start local-history cost scans. When the optional cost
+section is enabled, automatic cost scans are serialized and run no more than
+once per provider per hour. Use **Refresh cost history** on a Codex or Claude
+provider page when an immediate scan is required.
 
 ## Install
 
