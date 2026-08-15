@@ -34,7 +34,7 @@ ColumnLayout {
             }
 
             PlasmaComponents3.Label {
-                text: i18n("Plasma port, v0.2.2 — data via codexbar CLI")
+                text: i18n("Plasma port, v0.3.0 — data via codexbar CLI")
                 opacity: 0.6
                 font: Kirigami.Theme.smallFont
             }
