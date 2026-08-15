@@ -164,7 +164,9 @@ function parseScopedWindows(raw) {
                 || typeof row.pct !== "number" || !isFinite(row.pct))
             continue
         var resetsAt = null
-        if (hasOwn(row, "resetsAt")) {
+        // Match account-wide windows: an explicit JSON null means the adapter
+        // has no reset timestamp, not that the scoped window is malformed.
+        if (hasOwn(row, "resetsAt") && row.resetsAt !== null) {
             if (typeof row.resetsAt !== "string" || row.resetsAt.trim() === ""
                     || isNaN(Date.parse(row.resetsAt)))
                 continue

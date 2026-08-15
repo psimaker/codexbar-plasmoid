@@ -57,7 +57,7 @@ section is enabled, automatic cost scans are serialized and run no more than
 once per provider per hour. Use **Refresh cost history** on a Codex or Claude
 provider page when an immediate scan is required.
 
-### Optional Claude multi-account adapter
+## Optional Claude multi-account adapter
 
 Enable **Show all accounts from a schema-v1 adapter** and set the adapter
 executable path. Compatible adapters must implement only these CodexBar

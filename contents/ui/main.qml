@@ -143,9 +143,12 @@ PlasmoidItem {
                 && Math.floor(slot) === slot && slot > 0) {
             // Bound the switch like the list probe so a hung adapter (credential
             // lock, keychain prompt, or backend call) cannot leave
-            // claudeSwitchInFlight set and disable every switch button until
-            // the plasmoid is reloaded.
-            return prefix + "timeout -k 5 30 " + quoted + " --switch-to " + slot + " --json 2>/dev/null"
+            // claudeSwitchInFlight set, and cap its captured output just like
+            // the automatic list response.
+            var switchPipeline = quoted + " --switch-to " + slot
+                + " --json 2>/dev/null | head -c "
+                + (ClaudeAccounts.MAX_OUTPUT_BYTES + 1)
+            return prefix + "timeout -k 5 30 sh -c " + shellQuote(switchPipeline)
         }
         return ""
     }
