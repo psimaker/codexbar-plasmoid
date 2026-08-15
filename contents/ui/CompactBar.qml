@@ -130,6 +130,7 @@ MouseArea {
                     ProviderIconImage {
                         anchors.fill: parent
                         iconFile: Catalog.meta(providerItem.providerId).icon
+                        displayContext: ProviderIconImage.ContrastingContext
                     }
                 }
 

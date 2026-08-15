@@ -137,6 +137,9 @@ Item {
                                         visible: !tab.isOverview
                                         anchors.fill: parent
                                         iconFile: tab.meta.icon
+                                        displayContext: tab.selected
+                                                        ? ProviderIconImage.SelectedContext
+                                                        : ProviderIconImage.NormalContext
                                     }
                                 }
 
