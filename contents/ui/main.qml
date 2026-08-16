@@ -39,6 +39,8 @@ PlasmoidItem {
     readonly property int costAutoRefreshIntervalMs: 60 * 60 * 1000
     readonly property int costSchedulerIntervalMs: 5 * 60 * 1000
     readonly property bool costEnabled: Plasmoid.configuration.showCost
+    readonly property string commandPathPrefix:
+        'PATH="$HOME/.local/bin:$PATH:/usr/local/bin:/usr/bin:/bin"; '
     // Providers whose CLI process died with SIGSEGV are skipped by automatic
     // refreshes. A manual refresh still retries after the CLI was upgraded.
     property var autoRefreshBlocked: ({})
@@ -125,19 +127,19 @@ PlasmoidItem {
     function cliCmd(args) {
         var exe = (Plasmoid.configuration.cliPath || "").trim()
         var quoted = exe.length > 0 ? shellQuote(exe) : "codexbar"
-        // -k 10: hard-kill if SIGTERM is ignored after the 120s timeout
-        return 'PATH="$HOME/.local/bin:$PATH"; timeout -k 10 120 ' + quoted + " " + args + " 2>/dev/null"
+        // Plasma's environment may omit user or system bin directories.
+        // -k 10: hard-kill if SIGTERM is ignored after the 120s timeout.
+        return commandPathPrefix + "timeout -k 10 120 " + quoted + " " + args + " 2>/dev/null"
     }
 
     function claudeAdapterCmd(operation, slot) {
         var quoted = shellQuoteExecutable(claudeAdapterExecutable)
-        var prefix = 'PATH="$HOME/.local/bin:$PATH"; '
         if (operation === "list") {
             // Bound what Plasma's executable data engine can capture, while
             // retaining one extra byte so the parser can report overflow.
             var pipeline = quoted + " --list --json 2>/dev/null | head -c "
                 + (ClaudeAccounts.MAX_OUTPUT_BYTES + 1)
-            return prefix + "timeout -k 5 30 sh -c " + shellQuote(pipeline)
+            return commandPathPrefix + "timeout -k 5 30 sh -c " + shellQuote(pipeline)
         }
         if (operation === "switch" && typeof slot === "number" && isFinite(slot)
                 && Math.floor(slot) === slot && slot > 0) {
@@ -148,7 +150,7 @@ PlasmoidItem {
             var switchPipeline = quoted + " --switch-to " + slot
                 + " --json 2>/dev/null | head -c "
                 + (ClaudeAccounts.MAX_OUTPUT_BYTES + 1)
-            return prefix + "timeout -k 5 30 sh -c " + shellQuote(switchPipeline)
+            return commandPathPrefix + "timeout -k 5 30 sh -c " + shellQuote(switchPipeline)
         }
         return ""
     }
