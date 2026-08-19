@@ -6,6 +6,7 @@
                 "Name": "psimaker"
             }
         ],
+        "BugReportUrl": "https://github.com/psimaker/codexbar-plasmoid/issues",
         "Category": "System Information",
         "Description": "AI coding provider usage in your panel — a Plasma port of CodexBar",
         "Description[de]": "KI-Provider-Nutzungslimits im Panel — eine Plasma-Portierung von CodexBar",

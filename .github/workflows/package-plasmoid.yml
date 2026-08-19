@@ -1,0 +1,161 @@
+name: Package Plasma widget
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  release:
+    types:
+      - published
+
+permissions:
+  contents: read
+
+jobs:
+  validate-and-package:
+    if: github.event_name != 'release'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Install validation tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes libxml2-utils unzip
+
+      - name: Validate metadata and configuration
+        run: |
+          python3 -m json.tool metadata.json >/dev/null
+          xmllint --noout contents/config/main.xml
+
+      - name: Check changed whitespace
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          if [[ -z "$BASE_SHA" || "$BASE_SHA" =~ ^0+$ ]]; then
+            git show --check --format=fuller --no-ext-diff "$HEAD_SHA" >/dev/null
+          else
+            git diff --check "$BASE_SHA" "$HEAD_SHA"
+          fi
+
+      - name: Run repository tests
+        run: tests/run-tests.sh
+
+      - name: Build package
+        run: scripts/build-plasmoid.sh
+
+      - name: Validate package and checksum
+        id: package
+        run: |
+          artifact="$(find dist -maxdepth 1 -type f -name '*.plasmoid' -print -quit)"
+          [[ -n "$artifact" ]]
+          checksum="${artifact}.sha256"
+          [[ -f "$checksum" ]]
+          unzip -t "$artifact"
+          (cd dist && sha256sum --check "$(basename "$checksum")")
+          echo "artifact=$artifact" >> "$GITHUB_OUTPUT"
+          echo "checksum=$checksum" >> "$GITHUB_OUTPUT"
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: codexbar-plasmoid-${{ github.sha }}
+          path: |
+            ${{ steps.package.outputs.artifact }}
+            ${{ steps.package.outputs.checksum }}
+          if-no-files-found: error
+
+  qml-lint:
+    if: github.event_name != 'release'
+    runs-on: ubuntu-24.04
+    container: archlinux:base-devel
+    steps:
+      - name: Install Plasma 6 lint environment
+        run: >-
+          pacman -Syu --noconfirm
+          git nodejs qt6-declarative libplasma plasma5support kirigami kcmutils
+
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Lint QML in Plasma 6
+        run: |
+          qmllint_path="$(command -v qmllint || true)"
+          if [[ -z "$qmllint_path" && -x /usr/lib/qt6/bin/qmllint ]]; then
+            qmllint_path=/usr/lib/qt6/bin/qmllint
+          fi
+          if [[ -z "$qmllint_path" ]]; then
+            echo "qmllint is not available in the Plasma 6 environment" >&2
+            exit 1
+          fi
+          "$qmllint_path" -I contents/ui $(find contents -type f -name '*.qml' -print)
+
+  attach-release-assets:
+    if: github.event_name == 'release'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Check out the published tag
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.release.tag_name }}
+
+      - name: Validate release tag and metadata version
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          python3 -m json.tool metadata.json >/dev/null
+          scripts/validate-release-version.py "$RELEASE_TAG" metadata.json
+          [[ "$(git rev-parse HEAD)" == "$(git rev-parse "${RELEASE_TAG}^{commit}")" ]]
+
+      - name: Build and validate release package
+        id: package
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          scripts/build-plasmoid.sh "$RELEASE_TAG"
+          artifact="$(find dist -maxdepth 1 -type f -name '*.plasmoid' -print -quit)"
+          [[ -n "$artifact" ]]
+          checksum="${artifact}.sha256"
+          [[ -f "$checksum" ]]
+          unzip -t "$artifact"
+          (cd dist && sha256sum --check "$(basename "$checksum")")
+          echo "artifact=$artifact" >> "$GITHUB_OUTPUT"
+          echo "checksum=$checksum" >> "$GITHUB_OUTPUT"
+
+      - name: Refuse to replace existing release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_ID: ${{ github.event.release.id }}
+          ARTIFACT_PATH: ${{ steps.package.outputs.artifact }}
+          CHECKSUM_PATH: ${{ steps.package.outputs.checksum }}
+        run: |
+          existing_assets="$(gh api --paginate \
+            "repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}/assets" \
+            --jq '.[].name')"
+          for path in "$ARTIFACT_PATH" "$CHECKSUM_PATH"; do
+            name="$(basename "$path")"
+            if grep --fixed-strings --line-regexp --quiet "$name" <<<"$existing_assets"; then
+              echo "Release asset already exists; refusing to replace it: $name" >&2
+              exit 1
+            fi
+          done
+
+      - name: Attach package to published release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          ARTIFACT_PATH: ${{ steps.package.outputs.artifact }}
+          CHECKSUM_PATH: ${{ steps.package.outputs.checksum }}
+        run: >-
+          gh release upload "$RELEASE_TAG"
+          "$ARTIFACT_PATH" "$CHECKSUM_PATH"
+          --repo "$GITHUB_REPOSITORY"
