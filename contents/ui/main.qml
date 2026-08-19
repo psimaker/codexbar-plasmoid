@@ -6,6 +6,7 @@ import org.kde.plasma.plasma5support as P5Support
 import org.kde.kirigami as Kirigami
 import "code/catalog.js" as Catalog
 import "code/claudeAccounts.js" as ClaudeAccounts
+import "code/cliStatus.js" as CliStatus
 
 PlasmoidItem {
     id: root
@@ -41,6 +42,13 @@ PlasmoidItem {
     readonly property bool costEnabled: Plasmoid.configuration.showCost
     readonly property string commandPathPrefix:
         'PATH="$HOME/.local/bin:$PATH:/usr/local/bin:/usr/bin:/bin"; '
+    readonly property string cliExecutable:
+        CliStatus.executableForPath(Plasmoid.configuration.cliPath)
+    property string lastCheckedCliExecutable: ""
+    property var cliState: CliStatus.initialState()
+    property var pendingCliChecks: ({})
+    property int cliRequestSerial: 0
+    readonly property bool cliSetupRequired: CliStatus.isSetupRequired(cliState.code)
     // Providers whose CLI process died with SIGSEGV are skipped by automatic
     // refreshes. A manual refresh still retries after the CLI was upgraded.
     property var autoRefreshBlocked: ({})
@@ -124,12 +132,52 @@ PlasmoidItem {
         return shellQuote(s)
     }
 
-    function cliCmd(args) {
-        var exe = (Plasmoid.configuration.cliPath || "").trim()
-        var quoted = exe.length > 0 ? shellQuote(exe) : "codexbar"
+    function cliCmd(args, timeoutSeconds) {
+        var quoted = cliExecutable === "codexbar"
+            ? "codexbar" : shellQuoteExecutable(cliExecutable)
+        var seconds = typeof timeoutSeconds === "number" ? timeoutSeconds : 120
+        var killDelay = seconds <= 10 ? 5 : 10
         // Plasma's environment may omit user or system bin directories.
-        // -k 10: hard-kill if SIGTERM is ignored after the 120s timeout.
-        return commandPathPrefix + "timeout -k 10 120 " + quoted + " " + args + " 2>/dev/null"
+        return commandPathPrefix + "timeout -k " + killDelay + " " + seconds + " "
+            + quoted + " " + args + " 2>/dev/null"
+    }
+
+    function uniqueCliCommand(command, kind, generation) {
+        cliRequestSerial++
+        return command + " # codexbar-" + kind + "-" + generation
+            + "-" + cliRequestSerial
+    }
+
+    function stopLoadingIndicators() {
+        for (var provider in usageData) {
+            if (usageData[provider]) {
+                usageData[provider].loading = false
+                usageData[provider].costLoading = false
+            }
+        }
+    }
+
+    function startCliCheck() {
+        stopLoadingIndicators()
+        lastCheckedCliExecutable = cliExecutable
+        cliState = CliStatus.beginCheck(cliState)
+        var generation = cliState.generation
+        var command = uniqueCliCommand(cliCmd("--version", 10), "version", generation)
+        pendingCliChecks[command] = { generation: generation }
+        bump()
+        executable.connectSource(command)
+    }
+
+    function retryCli() {
+        autoRefreshBlocked = ({})
+        startCliCheck()
+    }
+
+    function manualRefresh() {
+        if (cliSetupRequired || cliState.code === CliStatus.UNKNOWN)
+            retryCli()
+        else
+            refreshAll(true)
     }
 
     function claudeAdapterCmd(operation, slot) {
@@ -251,10 +299,12 @@ PlasmoidItem {
     }
 
     function refreshAll(force) {
-        for (var i = 0; i < enabledProviders.length; i++) {
-            var provider = enabledProviders[i]
-            if (force === true || !autoRefreshBlocked[provider])
-                refreshProvider(provider)
+        if (CliStatus.canRunUsage(cliState.code)) {
+            for (var i = 0; i < enabledProviders.length; i++) {
+                var provider = enabledProviders[i]
+                if (force === true || !autoRefreshBlocked[provider])
+                    refreshProvider(provider)
+            }
         }
         // The account adapter is a separate executable from the codexbar CLI,
         // so a CLI crash block must not suppress its polling.
@@ -277,7 +327,8 @@ PlasmoidItem {
     }
 
     function canRefreshCost(p) {
-        return costEnabled && supportsCost(p)
+        return CliStatus.canRunUsage(cliState.code)
+            && costEnabled && supportsCost(p)
             && enabledProviders.indexOf(p) >= 0
             && costRefreshInFlight === ""
     }
@@ -301,8 +352,11 @@ PlasmoidItem {
         usageData[p].costLoading = true
         bump()
 
-        var costCmd = cliCmd("cost --provider " + p + " --json")
-        pendingCost[costCmd] = { p: p }
+        var cliGeneration = cliState.generation
+        var costCmd = uniqueCliCommand(
+            cliCmd("cost --provider " + p + " --json"),
+            "cost-" + p, cliGeneration)
+        pendingCost[costCmd] = { p: p, cliGeneration: cliGeneration }
         costRefreshInFlight = p
         costSourceInFlight = costCmd
         executable.connectSource(costCmd)
@@ -319,6 +373,8 @@ PlasmoidItem {
     }
 
     function refreshProvider(p) {
+        if (!CliStatus.canRunUsage(cliState.code))
+            return
         if (!usageData[p])
             usageData[p] = {}
         var gen = (requestGen[p] || 0) + 1
@@ -326,26 +382,42 @@ PlasmoidItem {
         usageData[p].loading = true
         bump()
 
-        var cmd = cliCmd("usage --provider " + p + " --json" + (Plasmoid.configuration.showStatus ? " --status" : ""))
-        pendingUsage[cmd] = { p: p, gen: gen }
+        var cliGeneration = cliState.generation
+        var cmd = uniqueCliCommand(
+            cliCmd("usage --provider " + p + " --json"
+                   + (Plasmoid.configuration.showStatus ? " --status" : "")),
+            "usage-" + p, cliGeneration)
+        pendingUsage[cmd] = { p: p, gen: gen, cliGeneration: cliGeneration }
         executable.connectSource(cmd)
     }
 
     function usageErrorText(exitCode, parseFailed) {
         if (exitCode === 124 || exitCode === 137)
-            return "Timed out querying the codexbar CLI"
+            return i18n("Timed out querying the CodexBar CLI")
         if (exitCode === 139)
-            return "codexbar CLI crashed (SIGSEGV) — update to v0.43.0 or newer, then refresh manually"
+            return i18n("CodexBar CLI crashed — update to version %1 or newer, then retry", CliStatus.MINIMUM_VERSION)
         if (exitCode === 127)
-            return "codexbar CLI not found — set the path in the settings"
+            return i18n("CodexBar CLI not found — set the path in the settings")
         if (parseFailed)
-            return "Unexpected codexbar output (JSON parse failed)"
+            return i18n("Unexpected CodexBar CLI output (JSON parse failed)")
         if (exitCode === 0)
-            return "No usage data available"
-        return "No usage data — check codexbar login/config (exit " + exitCode + ")"
+            return i18n("No usage data available")
+        return i18n("No usage data — check CodexBar login/configuration (exit %1)", exitCode)
     }
 
     function handleData(source, exitCode, stdout) {
+        var cliCheck = pendingCliChecks[source]
+        if (cliCheck !== undefined) {
+            delete pendingCliChecks[source]
+            if (cliCheck.generation !== cliState.generation)
+                return
+            cliState = CliStatus.applyVersionResult(
+                cliState, cliCheck.generation, exitCode, stdout)
+            bump()
+            refreshAll(true)
+            return
+        }
+
         var accountReq = pendingClaudeList[source]
         if (accountReq !== undefined) {
             delete pendingClaudeList[source]
@@ -408,7 +480,8 @@ PlasmoidItem {
         var req = pendingUsage[source]
         if (req !== undefined) {
             delete pendingUsage[source]
-            if (requestGen[req.p] !== req.gen)
+            if (requestGen[req.p] !== req.gen
+                    || req.cliGeneration !== cliState.generation)
                 return // stale response from an older refresh
             var d = usageData[req.p]
             if (!d)
@@ -431,8 +504,14 @@ PlasmoidItem {
                 d.entry = parsed[0]
                 d.entries = parsed
                 d.error = ""
+                d.errorCode = ""
+                cliState = CliStatus.applyUsageResult(
+                    cliState, req.cliGeneration, exitCode, true, false)
             } else {
                 d.error = usageErrorText(exitCode, parseFailed)
+                d.errorCode = CliStatus.usageFailureCode(exitCode, parseFailed)
+                cliState = CliStatus.applyUsageResult(
+                    cliState, req.cliGeneration, exitCode, false, parseFailed)
             }
             bump()
             return
@@ -445,6 +524,8 @@ PlasmoidItem {
                 costRefreshInFlight = ""
                 costSourceInFlight = ""
             }
+            if (creq.cliGeneration !== cliState.generation)
+                return
             var dc = usageData[creq.p]
             if (!dc)
                 dc = usageData[creq.p] = {}
@@ -535,7 +616,13 @@ PlasmoidItem {
         componentReady = true
         currentTab = defaultTab()
         deferAutomaticCostScans()
-        refreshAll(false)
+        startCliCheck()
+    }
+
+    onCliExecutableChanged: {
+        if (componentReady && CliStatus.pathChangeRequiresCheck(
+                lastCheckedCliExecutable, cliExecutable))
+            retryCli()
     }
 
     onClaudeAccountsEnabledChanged: {
@@ -582,7 +669,7 @@ PlasmoidItem {
         PlasmaCore.Action {
             text: i18n("Refresh")
             icon.name: "view-refresh-symbolic"
-            onTriggered: root.refreshAll(true)
+            onTriggered: root.manualRefresh()
         },
         PlasmaCore.Action {
             text: root.costRefreshInFlight === root.currentTab

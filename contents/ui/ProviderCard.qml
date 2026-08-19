@@ -131,6 +131,8 @@ ColumnLayout {
             plasmoidRoot.rev
             if (card.d && card.d.loading)
                 return i18n("Refreshing…")
+            if (plasmoidRoot.cliSetupRequired)
+                return ""
             if (card.d && card.d.error && card.d.error.length > 0)
                 return card.d.error
             if (card.usage && card.usage.updatedAt)
