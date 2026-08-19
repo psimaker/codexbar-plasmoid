@@ -302,6 +302,13 @@ Item {
 
             Item { Layout.preferredHeight: Kirigami.Units.smallSpacing }
 
+            CliSetupCard {
+                visible: fullRoot.currentTab !== "about"
+                         && fullRoot.plasmoidRoot.cliSetupRequired
+                Layout.fillWidth: true
+                plasmoidRoot: fullRoot.plasmoidRoot
+            }
+
             // ---- content ----
             OverviewPage {
                 visible: fullRoot.currentTab === "overview"
@@ -352,7 +359,7 @@ Item {
                 visible: fullRoot.currentTab !== "about"
                 iconName: "view-refresh-symbolic"
                 label: i18n("Refresh")
-                onActivated: fullRoot.plasmoidRoot.refreshAll(true)
+                onActivated: fullRoot.plasmoidRoot.manualRefresh()
             }
 
             MenuRow {
