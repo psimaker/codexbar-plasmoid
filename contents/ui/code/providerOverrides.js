@@ -184,6 +184,20 @@ function resetProvider(raw, id) {
     return serialize(map)
 }
 
+// Provider ids that have at least one override, in the given display order;
+// ids missing from that order (e.g. dropped from the catalog) follow, sorted.
+function overriddenProviders(raw, order) {
+    var ids = Object.keys(raw !== null && typeof raw === "object" ? raw : parse(raw))
+    var known = Array.isArray(order) ? order : []
+    var out = []
+    for (var i = 0; i < known.length; i++) {
+        if (ids.indexOf(known[i]) >= 0)
+            out.push(known[i])
+    }
+    var rest = ids.filter(function (id) { return out.indexOf(id) < 0 }).sort()
+    return out.concat(rest)
+}
+
 // Effective values: the override wins only when valid, else the global.
 function effectiveDisplayMode(raw, id, globalMode) {
     var entry = settingsFor(raw, id)

@@ -196,8 +196,10 @@ else
     xdotool mousemove 63 100 click 1
     sleep 3
     import -window "$settings_window" "$out/settings-providers.png"
-    # Claude's gear button (second row) opens its override dialog.
-    xdotool mousemove 980 204 click 1
+    # Claude's gear button (second row) opens its override dialog. The
+    # seeded override adds the "Reset All…" info bar above the list, and
+    # the globe button sits right of the gear.
+    xdotool mousemove 935 267 click 1
     sleep 3
     import -window "$settings_window" "$out/settings-overrides.png"
 fi

@@ -63,6 +63,20 @@ raw = lib.withSettings('{"codex":{"hideCritters":true}}', "claude",
     { panelDisplayMode: "logos" })
 assert.equal(lib.resetProvider(raw, "codex"),
     '{"claude":{"panelDisplayMode":"logos"}}')
+assert.equal(lib.resetProvider(raw, "nobody"), raw)
+
+// providers with overrides, in display order, unknown ids last
+assert.deepEqual(plain(lib.overriddenProviders("{}", ["codex", "claude"])), [])
+assert.deepEqual(plain(lib.overriddenProviders(
+    '{"claude":{"hideCritters":true},"codex":{"panelDisplayMode":"logos"},"zeta":{"hideCritters":true},"alpha":{"hideCritters":true}}',
+    ["codex", "claude", "gemini"])), ["codex", "claude", "alpha", "zeta"])
+// entries holding only invalid values do not count
+assert.deepEqual(plain(lib.overriddenProviders('{"codex":{"panelDisplayMode":"bogus"}}', ["codex"])), [])
+assert.deepEqual(plain(lib.overriddenProviders('{"codex":{"hideCritters":true}}')), ["codex"])
+// the parsed map works too, like the other helpers
+assert.deepEqual(plain(lib.overriddenProviders(lib.parse('{"claude":{"hideCritters":true}}'), ["claude"])), ["claude"])
+// "Reset All" is an empty map
+assert.deepEqual(plain(lib.overriddenProviders(lib.serialize({}), ["codex"])), [])
 
 // effective values prefer valid overrides, else the global (normalized)
 assert.equal(lib.effectiveHideCritters(raw, "codex", false), true)
