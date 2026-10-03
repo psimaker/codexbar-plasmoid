@@ -108,7 +108,26 @@ KCM.SimpleKCM {
             if (a != b && String(a) != String(b))
                 out.push(key + ": config=" + JSON.stringify(String(a)).slice(0, 80) + " cfg=" + JSON.stringify(String(b)).slice(0, 80))
         })
-        console.warn("codexbar-debug " + where + " diffs=" + out.length + " " + out.join(" | "))
+        var dialog = page.parent
+        while (dialog && !dialog.hasOwnProperty("wasConfigurationChangedSignalSent"))
+            dialog = dialog.parent
+        console.warn("codexbar-debug " + where + " diffs=" + out.length + " " + out.join(" | ")
+            + " dialog=" + (dialog ? "found" : "missing")
+            + (dialog ? " signalSent=" + dialog.wasConfigurationChangedSignalSent
+                        + " isChanged=" + dialog.isConfigurationChanged()
+                        + " sameConfig=" + (dialog.Plasmoid ? "?" : "n/a") : ""))
+    }
+
+    onCfg_enabledProvidersChanged: debugDiff("cfg_enabledProvidersChanged")
+    onCfg_configProvidersChanged: debugDiff("cfg_configProvidersChanged")
+    onCfg_providerSourcesChanged: debugDiff("cfg_providerSourcesChanged")
+    onCfg_providerOverridesChanged: debugDiff("cfg_providerOverridesChanged")
+
+    Timer {
+        interval: 5000
+        running: true
+        repeat: true
+        onTriggered: page.debugDiff("tick")
     }
 
     Component.onCompleted: {
