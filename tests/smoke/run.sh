@@ -20,7 +20,7 @@ chmod 700 "$XDG_RUNTIME_DIR"
 ln -s "$repo/tests/smoke/codexbar" "$HOME/.local/bin/codexbar"
 export CODEXBAR_FIXTURES="$repo/tests/smoke/fixtures" CODEXBAR_MOCK_STATE="$work/mock-config"
 
-export DISPLAY=:99 QT_QPA_PLATFORM=xcb
+export DISPLAY=:99 QT_QPA_PLATFORM=xcb QT_FORCE_STDERR_LOGGING=1
 Xvfb "$DISPLAY" -screen 0 1280x900x24 -nolisten tcp &
 xvfb_pid=$!
 trap 'kill "$xvfb_pid" 2>/dev/null || true' EXIT
