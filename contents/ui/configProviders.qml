@@ -97,7 +97,24 @@ KCM.SimpleKCM {
         cfg_enabledProviders = list.join(",")
     }
 
-    Component.onCompleted: baseEnabled = enabledList()
+    function debugDiff(where) {
+        var config = Plasmoid.configuration
+        var out = []
+        config.keys().forEach(function (key) {
+            var cfgKey = "cfg_" + key
+            if (!page.hasOwnProperty(cfgKey))
+                return
+            var a = config[key], b = page[cfgKey]
+            if (a != b && String(a) != String(b))
+                out.push(key + ": config=" + JSON.stringify(String(a)).slice(0, 80) + " cfg=" + JSON.stringify(String(b)).slice(0, 80))
+        })
+        console.warn("codexbar-debug " + where + " diffs=" + out.length + " " + out.join(" | "))
+    }
+
+    Component.onCompleted: {
+        baseEnabled = enabledList()
+        debugDiff("loaded")
+    }
 
     // The dialog writes every cfg_ key of this page on Apply and on OK, even
     // unchanged ones, so the page follows what the widget copies from
@@ -112,10 +129,12 @@ KCM.SimpleKCM {
             page.cfg_enabledProviders = ConfigProviders.rebaseSelection(
                 page.baseEnabled, page.enabledList(), current).join(",")
             page.baseEnabled = current
+            page.debugDiff("enabledProviders")
         }
 
         function onConfigProvidersChanged() {
             page.cfg_configProviders = Plasmoid.configuration.configProviders
+            page.debugDiff("configProviders")
         }
     }
 
