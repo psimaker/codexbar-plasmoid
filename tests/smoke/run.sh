@@ -205,6 +205,36 @@ xwininfo -root -tree >"$out/settings.windows.txt" 2>&1 || true
 kill "$settings_pid" 2>/dev/null || true
 wait "$settings_pid" 2>/dev/null || true
 
+# The Providers page follows config.json while it is open: the CLI enables
+# Groq, the widget reads that (every minute here), and OK, which writes every
+# key of the page, keeps Groq enabled.
+rm -f "$CODEXBAR_MOCK_STATE"
+plasmoidviewer -a "$(package external "$three" refreshIntervalMinutes=1)" -s 560x860 -f planar \
+    >"$out/settings-external.log" 2>&1 &
+external_pid=$!
+sleep "${SMOKE_WAIT:-15}"
+xdotool mousemove 230 694 click 1
+sleep 5
+external_window="$(xdotool search --name 'CodexBar Settings' | head -n 1)"
+if [[ -z "$external_window" ]]; then
+    echo "The settings window did not open" >&2
+    failed=1
+else
+    xdotool windowsize "$external_window" 1000 890
+    sleep 2
+    xdotool mousemove 63 100 click 1
+    sleep 3
+    echo groq >>"$CODEXBAR_MOCK_STATE"
+    sleep 70
+    import -window "$external_window" "$out/settings-external.png"
+    # OK at the bottom right closes the window and saves the page.
+    xdotool mousemove 784 869 click 1
+    sleep 5
+    expect_config codex claude antigravity groq
+fi
+kill "$external_pid" 2>/dev/null || true
+wait "$external_pid" 2>/dev/null || true
+
 # QML runtime errors from the widget's own files fail the test, and so does
 # an applet or containment that could not be loaded at all.
 errors="$(grep -h -E 'contents/ui/.*(Error|Unable to assign|is not a function|Cannot read property|is not defined)|does not exist|Containment doesn.t exist' "$out"/*.log || true)"
