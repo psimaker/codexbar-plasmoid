@@ -1,6 +1,9 @@
 <div align="center">
 
-<img src="docs/screenshots/codexbar-plasma.png" width="360" alt="CodexBar widget in a KDE Plasma panel with the popup open">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/overview.png">
+  <img src="docs/screenshots/overview-light.png" width="372" alt="CodexBar overview with Codex, Claude and Antigravity session and weekly quotas">
+</picture>
 
 # CodexBar for KDE Plasma 6
 
@@ -51,10 +54,9 @@ Options: `--widget-only`, `--cli-only`, `--version v0.6.1`. The scripts are plai
 - **Optional Claude multi-account view.** Stacked 5-hour and 7-day cards per account with explicit switching through a schema-v1 [`claude-swap`](https://github.com/realiti4/claude-swap) adapter.
 
 <div align="center">
-<img src="docs/screenshots/panel-display-mode-settings.png" width="520" alt="Panel display settings: meters, provider logos, or both">
+<a href="docs/screenshots/README.md"><img src="docs/screenshots/panel-modes.png" width="512" alt="CodexBar at normal panel size: merged meter, per-provider meters with Codex and Claude critters, and logos with percentages and reset countdowns"></a>
 <br>
-<img src="docs/screenshots/provider-logos-horizontal.png" alt="Provider logos in a horizontal panel">&nbsp;&nbsp;
-<img src="docs/screenshots/provider-logos-vertical.png" height="120" alt="Provider logos in a vertical panel">
+<a href="docs/screenshots/README.md">Provider detail, settings, and CLI setup screenshots</a>
 </div>
 
 <details>

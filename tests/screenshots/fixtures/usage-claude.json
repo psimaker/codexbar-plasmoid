@@ -1,0 +1,13 @@
+[
+  {
+    "provider": "claude",
+    "source": "oauth",
+    "status": {"indicator": "none", "description": "All Systems Operational"},
+    "usage": {
+      "primary": {"usedPercent": 42, "windowMinutes": 300, "resetsAt": "@IN_2H10M@"},
+      "secondary": {"usedPercent": 24, "windowMinutes": 10080, "resetsAt": "@IN_5D@"},
+      "updatedAt": "@NOW@",
+      "identity": {"loginMethod": "max"}
+    }
+  }
+]
