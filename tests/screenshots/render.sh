@@ -57,8 +57,8 @@ xdo mousemove 3199 3199
 caption_font="$(fc-match -f '%{file}' 'Noto Sans:style=Regular')"
 
 {
-    git -C "$repo" rev-parse HEAD
-    git -C "$repo" status --short
+    git -c safe.directory="$repo" -C "$repo" rev-parse HEAD
+    git -c safe.directory="$repo" -C "$repo" status --short
     uname -m
     pacman -Q plasma-sdk libplasma qt6-base qt6-declarative breeze noto-fonts libfaketime imagemagick
     fc-match 'Noto Sans'
