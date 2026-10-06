@@ -235,6 +235,51 @@ assert.equal(catalog.panelWindow(Object.assign({}, monthly,
     assert.equal(catalog.mergedStale([], sources, none, staleOf([])), true)
 }
 
+// Balances in usage.providerCost (#58), named as upstream's cost
+// presentation names them; a zero balance is listed, a missing one is not.
+{
+    const usd = (fields) => Object.assign({ used: 0, limit: 0, currencyCode: "USD" }, fields)
+    assert.deepEqual(plain(catalog.costBalances("claude", usd({ used: 3.2, limit: 50, balance: 14.46 }))),
+        [{ label: "Extra usage balance", amount: 14.46, currencyCode: "USD" }])
+    assert.deepEqual(plain(catalog.costBalances("claude", usd({ balance: 0 }))),
+        [{ label: "Extra usage balance", amount: 0, currencyCode: "USD" }])
+    assert.deepEqual(plain(catalog.costBalances("claude", usd({}))), [])
+    assert.deepEqual(plain(catalog.costBalances("claude", usd({ balance: null }))), [])
+    // Codex lists its balance in credits only
+    assert.deepEqual(plain(catalog.costBalances("codex", { used: 0, limit: 0, currencyCode: "Credits", balance: 1200 })),
+        [{ label: "Extra usage balance", amount: 1200, currencyCode: "Credits" }])
+    assert.deepEqual(plain(catalog.costBalances("codex", usd({ balance: 5 }))), [])
+    // Devin and LiteLLM carry the amount in `used`
+    assert.deepEqual(plain(catalog.costBalances("devin", usd({ used: 7.5, period: "Extra usage balance" }))),
+        [{ label: "Extra usage", amount: 7.5, currencyCode: "USD" }])
+    assert.deepEqual(plain(catalog.costBalances("devin", usd({ used: 7.5, limit: 20, period: "Monthly" }))), [])
+    assert.deepEqual(plain(catalog.costBalances("litellm", usd({ used: 12, period: "This month" }))),
+        [{ label: "This month", amount: 12, currencyCode: "USD" }])
+    assert.deepEqual(plain(catalog.costBalances("litellm", usd({ used: 12, limit: 0 }))),
+        [{ label: "Spend", amount: 12, currencyCode: "USD" }])
+    assert.deepEqual(plain(catalog.costBalances("litellm", usd({ used: 12, limit: 100 }))), [])
+    // any other provider, such as Grok's purchased credits (CodexBar 0.72)
+    assert.deepEqual(plain(catalog.costBalances("grok", usd({ balance: 14.46 }))),
+        [{ label: "Balance", amount: 14.46, currencyCode: "USD" }])
+    assert.deepEqual(plain(catalog.costBalances("grok", null)), [])
+
+    // the generic used/limit line stays away from balance-only snapshots
+    assert.equal(catalog.showsCostFallback("claude", usd({ used: 3.2, limit: 50, balance: 14.46 })), true)
+    assert.equal(catalog.showsCostFallback("claude", usd({ balance: 14.46 })), false)
+    assert.equal(catalog.showsCostFallback("grok", usd({ balance: 0 })), false)
+    assert.equal(catalog.showsCostFallback("codex", { used: 0, limit: 0, currencyCode: "Credits" }), false)
+    assert.equal(catalog.showsCostFallback("codex", { used: 10, limit: 0, currencyCode: "Quota" }), true)
+    assert.equal(catalog.showsCostFallback("devin", usd({ used: 7.5, period: "Extra usage balance" })), false)
+    assert.equal(catalog.showsCostFallback("litellm", usd({ used: 12 })), false)
+    assert.equal(catalog.showsCostFallback("litellm", usd({ used: 12, limit: 100 })), true)
+    assert.equal(catalog.showsCostFallback("cursor", null), false)
+
+    assert.equal(catalog.amountText(14.46, "USD"), "$ 14.46")
+    assert.equal(catalog.amountText(-0.5, undefined), "$ -0.50")
+    assert.equal(catalog.amountText(1200, "Credits"), "1200.00 Credits")
+    assert.equal(catalog.amountText(NaN, "USD"), "")
+}
+
 // Reset countdown (#30): the window behind the panel percentage
 const countdownNow = Date.parse("2026-09-30T12:00:00Z")
 const pickAt = (resetsAt) => ({ remaining: 60, window: { usedPercent: 40, resetsAt } })

@@ -208,6 +208,61 @@ function money(v) {
     return "$ " + v.toFixed(2)
 }
 
+function finite(v) {
+    return typeof v === "number" && isFinite(v)
+}
+
+// An amount in a cost snapshot's currency: dollars like money(), anything
+// else (Codex's "Credits") with its code after the number.
+function amountText(amount, currencyCode) {
+    if (!finite(amount))
+        return ""
+    if (!currencyCode || currencyCode === "USD")
+        return money(amount)
+    return amount.toFixed(2) + " " + currencyCode
+}
+
+// Balances a card lists from usage.providerCost, as upstream's per-provider
+// cost presentation names them: [{ label, amount, currencyCode }]. A
+// balance of zero is listed, a missing one is not.
+function costBalances(providerId, cost) {
+    if (!cost || typeof cost !== "object")
+        return []
+    function one(label, amount) {
+        return finite(amount) ? [{ label: label, amount: amount, currencyCode: cost.currencyCode }] : []
+    }
+    switch (providerId) {
+    case "claude":
+        return one("Extra usage balance", cost.balance)
+    case "codex":
+        return cost.currencyCode === "Credits" ? one("Extra usage balance", cost.balance) : []
+    case "devin":
+        return cost.period === "Extra usage balance" ? one("Extra usage", cost.used) : []
+    case "litellm":
+        return finite(cost.limit) && cost.limit <= 0 ? one(cost.period || "Spend", cost.used) : []
+    default:
+        return one("Balance", cost.balance)
+    }
+}
+
+// Whether a card without a usable primary window shows the generic
+// "Cost: used / limit" line; balance-only snapshots do not.
+function showsCostFallback(providerId, cost) {
+    if (!cost || typeof cost !== "object")
+        return false
+    var empty = cost.used === 0 && cost.limit === 0
+    switch (providerId) {
+    case "codex":
+        return cost.currencyCode !== "Credits" || !empty
+    case "devin":
+        return cost.period !== "Extra usage balance"
+    case "litellm":
+        return !(finite(cost.limit) && cost.limit <= 0)
+    default:
+        return !(empty && finite(cost.balance))
+    }
+}
+
 // "Resets in 3h 53m" / "Resets in 3d 20h" — like the original menu rows.
 // Falls back to the CLI's resetDescription when no exact timestamp exists.
 function resetText(win, nowMs) {

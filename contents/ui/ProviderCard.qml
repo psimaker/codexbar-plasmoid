@@ -144,7 +144,8 @@ ColumnLayout {
         if (!usage || !usage.providerCost || Catalog.usableWindow(usage.primary))
             return ""
         var cost = usage.providerCost
-        if (typeof cost.used !== "number" || typeof cost.limit !== "number" || cost.limit <= 0)
+        if (typeof cost.used !== "number" || typeof cost.limit !== "number" || cost.limit <= 0
+                || !Catalog.showsCostFallback(providerId, cost))
             return ""
         var label = cost.currencyCode === "Quota" ? i18n("Quota") : i18n("Cost")
         var unit = cost.currencyCode && cost.currencyCode !== "Quota" ? " " + cost.currencyCode : ""
@@ -283,6 +284,25 @@ ColumnLayout {
         opacity: 0.75
         font: Kirigami.Theme.smallFont
         elide: Text.ElideRight
+    }
+
+    // Prepaid balances in usage.providerCost (CLIRenderer's cost lines)
+    Repeater {
+        model: {
+            plasmoidRoot.rev
+            return card.extrasOnly || !card.usage ? []
+                : Catalog.costBalances(card.providerId, card.usage.providerCost)
+        }
+
+        TruncatedLabel {
+            required property var modelData
+            Layout.fillWidth: true
+            text: i18n("%1: %2", modelData.label,
+                       Catalog.amountText(modelData.amount, modelData.currencyCode))
+            opacity: 0.75
+            font: Kirigami.Theme.smallFont
+            elide: Text.ElideRight
+        }
     }
 
     // ---- provider detail sections (usage.details) ----
