@@ -15,3 +15,4 @@ node tests/test-catalog.js
 node tests/test-provider-sources.js
 node tests/test-provider-overrides.js
 node tests/test-config-providers.js
+node tests/test-usage-probes.js
