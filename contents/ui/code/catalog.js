@@ -6,7 +6,7 @@
 .pragma library
 
 var PROVIDERS = {
-    // Order follows `codexbar usage --help` (CodexBar 0.71.0).
+    // Order follows `codexbar usage --help` (CodexBar 0.72.0).
     "codex":        { name: "Codex",              color: "#49A3B0", dashboard: "https://chatgpt.com/codex/cloud/settings/analytics#usage", status: "https://status.openai.com/", icon: "ProviderIcon-codex.svg", critter: "codex" },
     "openai":       { name: "OpenAI",             color: "#0F826E", dashboard: "https://platform.openai.com/usage", status: "https://status.openai.com", icon: "ProviderIcon-codex.svg" },
     "azure-openai": { name: "Azure OpenAI",       color: "#0078D4", dashboard: "https://ai.azure.com", status: "https://azure.status.microsoft/en-us/status", icon: "ProviderIcon-codex.svg" },
@@ -95,7 +95,8 @@ var PROVIDERS = {
     "llmman":       { name: "llmman",             color: "#6CC5B0", dashboard: "", status: "", icon: "ProviderIcon-llmman.svg", minCli: "0.66.0" },
     "xkiro":        { name: "xKiro",              color: "#52C99B", dashboard: "https://xkiro.com", status: "", icon: "ProviderIcon-xkiro.svg", minCli: "0.67.0" },
     "museai":       { name: "Muse (muse.ai)",     color: "#0668E1", dashboard: "https://muse.ai/?settings_tab=general", status: "", icon: "ProviderIcon-museai.svg", minCli: "0.71.0" },
-    "lithosai":     { name: "LithosAI",           color: "#6B7280", dashboard: "https://console.lithosai.cloud", status: "", icon: "ProviderIcon-lithosai.svg", minCli: "0.71.0" }
+    "lithosai":     { name: "LithosAI",           color: "#6B7280", dashboard: "https://console.lithosai.cloud", status: "", icon: "ProviderIcon-lithosai.svg", minCli: "0.71.0" },
+    "workbuddy":    { name: "WorkBuddy",          color: "#0DC8A6", dashboard: "https://www.workbuddy.cn/profile/plans-usage", status: "", icon: "ProviderIcon-workbuddy.svg", minCli: "0.72.0" }
 }
 
 // Providers whose local logs the `codexbar cost` command can price.
