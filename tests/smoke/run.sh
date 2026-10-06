@@ -61,6 +61,20 @@ expect_config() {
     fi
 }
 
+# expect_extent NAME height|width MIN MAX CROP checks how tall (horizontal
+# panel) or wide (vertical panel) the widget draws in a panel scenario: the
+# non-black pixels inside CROP, which leaves out plasmoidviewer's toolbar.
+# #47 grew the panel icons from 32 to about 100 px and the job stayed green.
+expect_extent() {
+    local name="$1" axis="$2" min="$3" max="$4" crop="$5" geometry size
+    geometry="$(magick "$out/$name.png" -crop "$crop" +repage -fuzz 3% -trim -format '%wx%h' info: 2>/dev/null || true)"
+    if [[ "$axis" == height ]]; then size="${geometry#*x}"; else size="${geometry%x*}"; fi
+    if [[ ! "$size" =~ ^[0-9]+$ ]] || (( size < min || size > max )); then
+        echo "$name: the widget draws ${geometry:-nothing}, expected a $axis of $min to $max px" >&2
+        failed=1
+    fi
+}
+
 # shoot NAME WIDTHxHEIGHT saves the screen and the widget's corner of it.
 shoot() {
     xwininfo -root -tree >"$out/$1.windows.txt" 2>&1 || true
@@ -90,6 +104,7 @@ three="enabledProviders=codex,claude,antigravity"
 panel=(-c org.kde.panel -f horizontal -l topedge)
 render panel-meters "$(package meters "$three" showPercentInPanel=true panelPercentSource=lowest)" \
     640x140 "${panel[@]}"
+expect_extent panel-meters height 16 40 640x88+0+0
 # Nothing is probed before the CLI check, whose answer would be dropped.
 cp "$CODEXBAR_MOCK_STATE.calls" "$out/panel-meters.calls.txt"
 if [[ "$(head -n 1 "$CODEXBAR_MOCK_STATE.calls" | cut -d ' ' -f 2-)" != "--version" ]]; then
@@ -100,12 +115,16 @@ fi
 expect_config codex claude antigravity
 render panel-logos "$(package logos "$three" panelDisplayMode=logos showPercentInPanel=true)" \
     640x140 "${panel[@]}"
+expect_extent panel-logos height 16 40 640x88+0+0
 render panel-override "$(package override "$three" showPercentInPanel=true \
     'providerOverrides={"claude":{"panelDisplayMode":"logos"}}')" 640x140 "${panel[@]}"
+expect_extent panel-override height 16 40 640x88+0+0
 render panel-countdown "$(package countdown "$three" panelDisplayMode=logos showPercentInPanel=true \
     showResetCountdown=true)" 640x140 "${panel[@]}"
+expect_extent panel-countdown height 16 40 640x88+0+0
 render panel-vertical "$(package vertical "$three" showPercentInPanel=true showResetCountdown=true \
     separateIcons=true)" 160x520 -c org.kde.panel -f vertical -l leftedge
+expect_extent panel-vertical width 40 120 160x460+0+0
 render popup "$(package popup "$three")" 560x860 -f planar
 render popup-used "$(package popup-used "$three" usageBarsShowUsed=true)" 560x860 -f planar
 # A provider only config.json knows, such as a user plugin, still shows up.
@@ -130,6 +149,7 @@ expect_config codex
 export CODEXBAR_MOCK_VERSION=0.65.0
 render panel-legacy "$(package legacy "$three" panelDisplayMode=logos showPercentInPanel=true)" \
     640x140 "${panel[@]}"
+expect_extent panel-legacy height 16 40 640x88+0+0
 unset CODEXBAR_MOCK_VERSION
 expect_config codex
 
