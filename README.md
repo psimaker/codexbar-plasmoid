@@ -10,6 +10,7 @@ A faithful KDE Plasma port of [CodexBar](https://github.com/steipete/CodexBar), 
 Codex, Claude, Cursor, Copilot, Gemini and 80+ more providers, driven by the official CodexBar CLI.
 
 [![Release](https://img.shields.io/github/v/release/psimaker/codexbar-plasmoid?style=flat-square&color=1d99f3)](https://github.com/psimaker/codexbar-plasmoid/releases/latest)
+[![KDE Store](https://img.shields.io/badge/dynamic/xml?url=https%3A%2F%2Fapi.kde-look.org%2Focs%2Fv1%2Fcontent%2Fdata%2F2377011&query=%2F%2Fcontent%2Fversion&label=KDE%20Store&style=flat-square&color=1d99f3&logo=kde&logoColor=white)](https://store.kde.org/p/2377011)
 [![CI](https://img.shields.io/github/actions/workflow/status/psimaker/codexbar-plasmoid/package-plasmoid.yml?branch=main&style=flat-square&label=CI)](https://github.com/psimaker/codexbar-plasmoid/actions/workflows/package-plasmoid.yml)
 [![KDE Plasma 6](https://img.shields.io/badge/KDE_Plasma-6-1d99f3?style=flat-square&logo=kde&logoColor=white)](https://kde.org/plasma-desktop/)
 [![CodexBar CLI](https://img.shields.io/badge/CodexBar_CLI-%E2%89%A5%200.43-49a3b0?style=flat-square)](https://github.com/steipete/CodexBar/blob/main/docs/cli.md)
@@ -32,6 +33,8 @@ Then right-click your panel → **Add Widgets…** → search **CodexBar**. That
 | 🧩 **Widget** | Downloads the latest `.plasmoid` release, verifies its SHA-256 checksum and installs it with `kpackagetool6`. |
 | 🖥️ **CLI** | Downloads the official CodexBar CLI build for your CPU (`x86_64` / `aarch64`), verifies the checksum and links it as `~/.local/bin/codexbar`. |
 | 🔒 **Safe** | User-local only, no root, nothing outside `~/.local`. Re-run it any time to update both. |
+
+**Or from the KDE Store:** right-click your panel → **Add Widgets…** → **Get New Widgets** → **Download New Plasma Widgets…**, search for **CodexBar** and install it ([store page](https://store.kde.org/p/2377011)). The store has the widget only; when the CLI is missing, the popup offers to install it.
 
 > [!TIP]
 > Already have the widget? It installs and updates the CLI by itself: the popup shows an **Install CodexBar CLI** button when the CLI is missing or too old, and **About CodexBar** offers **Update CodexBar CLI to the latest release**.
@@ -98,8 +101,6 @@ sha256sum -c com.github.psimaker.codexbar-<version>.plasmoid.sha256
 ```
 
 An updated widget takes effect after Plasma reloads it (log out and in, or `systemctl --user restart plasma-plasmashell.service`).
-
-A KDE Store listing is planned but not published yet; until then use the release package.
 </details>
 
 <details>
