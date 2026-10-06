@@ -3,12 +3,14 @@
 # payloads in $CODEXBAR_FIXTURES with reset times relative to now, and keeps
 # the enabled providers of its config.json in $CODEXBAR_MOCK_STATE (one
 # CodexBar id per line; missing means only the default-enabled Codex, and
-# "broken" a config.json the CLI cannot decode). Fetching the provider named
-# in $CODEXBAR_MOCK_CRASH crashes with SIGSEGV. With $CODEXBAR_MOCK_READONLY
+# "broken" a config.json the CLI cannot decode). Every call's arguments are
+# appended to $CODEXBAR_MOCK_STATE.calls. Fetching the provider named in
+# $CODEXBAR_MOCK_CRASH crashes with SIGSEGV. With $CODEXBAR_MOCK_READONLY
 # set, config.json cannot be written.
 fixtures="${CODEXBAR_FIXTURES:?CODEXBAR_FIXTURES is not set}"
 state="${CODEXBAR_MOCK_STATE:?CODEXBAR_MOCK_STATE is not set}"
 providers="$fixtures/providers.txt"
+printf '%s %s\n' "$(date +%s.%N)" "$*" >>"$state.calls"
 decode_error="Failed to decode CodexBar config: The data isn't in the correct format."
 
 # Like CodexBar 0.70 with a config.json it cannot decode, every command but
