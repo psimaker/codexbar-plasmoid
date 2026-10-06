@@ -74,7 +74,7 @@ start() {
     local name="$1" size="$2" form="$3"
     theme="$4"
     shift 4
-    local pkg capture_home scheme icons look
+    local capture_home scheme icons look
     case "$theme" in
         dark) scheme=BreezeDark; icons=breeze-dark; look=org.kde.breezedark.desktop ;;
         light) scheme=BreezeLight; icons=breeze; look=org.kde.breeze.desktop ;;
@@ -109,6 +109,7 @@ name=default
 EOF
     # Start from the mock CLI's curated config, not a plasmoid-only list.
     printf '%s\n' codex claude antigravity >"$CODEXBAR_MOCK_STATE"
+    : >"$CODEXBAR_MOCK_STATE.calls"
     log="$out/diagnostics/$name.log"
     local options=(-f planar)
     if [[ "$form" == horizontal ]]; then
@@ -198,7 +199,8 @@ stop() {
     kill "$viewer_pid" 2>/dev/null || true
     wait "$viewer_pid" 2>/dev/null || true
     viewer_pid=""
-    "${capture[@]}" errors "$log"
+    cp "$CODEXBAR_MOCK_STATE.calls" "${log%.log}.calls.txt"
+    "${capture[@]}" errors "$log" "$pkg"
 }
 
 # Capture measured content with EXACTLY 16 logical pixels on every side.
@@ -230,6 +232,10 @@ shoot() {
         return 1
     }
     magick "$a" -crop "$crop" +repage "$out/diagnostics/$name.content.png"
+    if [[ "$kind" == panel ]]; then
+        # QML visibility alone cannot detect plasmoidviewer's overlaid toolbar.
+        "${capture[@]}" panel-pixels "$state" "$a" >"$out/diagnostics/$name.pixels.json"
+    fi
     local actual_width actual_height
     read -r actual_width actual_height < <(magick identify -format '%w %h\n' "$out/diagnostics/$name.content.png")
     [[ "$actual_width" -le "$width" && "$actual_height" -le "$height" ]] || {
@@ -280,7 +286,8 @@ popup_views() {
     done
     [[ -n "$settings_window" ]] || { echo 'Settings click did not open its window' >&2; exit 1; }
     window="$settings_window"
-    xdo windowsize --sync "$window" 1856 1920
+    # The Notifications section adds three controls and a wrapped hint.
+    xdo windowsize --sync "$window" 1856 2240
     xdo windowmove --sync "$window" 0 0
     xdo windowfocus --sync "$window"
     wait_state general settings-general
@@ -321,32 +328,35 @@ panel_views() {
     for mode in merged separate; do
         separate=false
         [[ "$mode" != separate ]] || separate=true
-        start "meters-$mode" 544x44 horizontal dark "separateIcons=$separate" "showPercentInPanel=$separate"
+        # Like the smoke test: the 32px icon strip sits above the viewer toolbar.
+        start "meters-$mode" 640x140 horizontal dark "separateIcons=$separate" "showPercentInPanel=$separate"
         wait_state panel "meters-$mode"
         shot "meters-$mode"
         stop
     done
-    start logos-horizontal 544x44 horizontal dark panelDisplayMode=logos showResetCountdown=true
+    start logos-horizontal 640x140 horizontal dark panelDisplayMode=logos showResetCountdown=true
     wait_state panel logos-horizontal
     shot logos-horizontal
     stop
 
-    # Three native 44px panel strips at 2x, aligned beneath external captions.
+    # Crop only the native 32px icon grid. Add 6 logical pixels above/below
+    # each row on the canvas, giving the spacing of a normal 44px panel without
+    # importing toolbar borders or shadows from the surrounding viewer.
     # Preserve individual captures in diagnostics for reviewing size and crops.
     panel_width=0
     for name in meters-merged meters-separate logos-horizontal; do
         read -r width height < <(magick identify -format '%w %h\n' "$out/diagnostics/$name.content.png")
-        [[ "$height" == 88 ]] || { echo "$name is not a 44px panel at 2x" >&2; exit 1; }
+        [[ "$height" == 64 ]] || { echo "$name does not contain native 32px icons at 2x" >&2; exit 1; }
         [[ "$width" -le "$panel_width" ]] || panel_width="$width"
         mv "$out/images/$name.png" "$out/diagnostics/"
     done
     panel_background="$(magick "$out/diagnostics/meters-merged.content.png" -format '%[pixel:p{0,0}]' info:)"
     magick -size "$((panel_width + 64))x512" "xc:$panel_background" \
-        "$out/diagnostics/meters-merged.content.png" -geometry +32+72 -composite \
-        "$out/diagnostics/meters-separate.content.png" -geometry +32+232 -composite \
-        "$out/diagnostics/logos-horizontal.content.png" -geometry +32+392 -composite \
+        "$out/diagnostics/meters-merged.content.png" -geometry +32+84 -composite \
+        "$out/diagnostics/meters-separate.content.png" -geometry +32+244 -composite \
+        "$out/diagnostics/logos-horizontal.content.png" -geometry +32+404 -composite \
         -font "$caption_font" -pointsize 22 -fill '#bdc3c7' -gravity NorthWest \
-        -annotate +32+32 'Merged meter' -annotate +32+192 'Per-provider meters' \
+        -annotate +32+32 'Merged meter (three providers)' -annotate +32+192 'Per-provider meters' \
         -annotate +32+352 'Provider logos with reset countdowns' \
         -strip "$out/images/panel-modes.png"
 }

@@ -18,9 +18,25 @@ lighter use is distinct from the main session. Today's cost/tokens are below
 the 30-day totals, and the blended amounts are reasonable fictional examples.
 Operational status and a Pro plan provide context without an account identity.
 
-The panel candidates were never reached, so their appearance is still
-unreviewed. The next run uses a normal 44 px panel instead of the original
-64 px capture window and combines three modes in one comparison. Review its
-icon scale, critter detail, caption spacing and countdown legibility at the
-README's display width. Also inspect light-theme icon contrast, all setup-card
-buttons, the shortened settings footers and the absence of email/account lines.
+In that run the panel candidates were never reached. Round 2 tried a 44 px
+viewer window and combined three modes in one comparison; the result below
+shows why that window was too small. Panel icon scale, critter detail, caption
+spacing and countdown legibility at the README's display width still need
+review after the next CI run.
+
+## Review after round 2
+
+The overview pair, Codex detail, Providers settings and light CLI setup card
+now have suitable framing and remain unchanged. General settings also has a
+good crop; its next capture adds 160 logical pixels of height to fit the new
+Notifications section, with both notifications disabled by default.
+
+The panel comparison is rejected: plasmoidviewer's toolbar covers most of two
+rows, hides Claude and Antigravity, and leaves a vertical edge beside the merged
+meter. The small viewer window caused the overlap; the observer checked model
+contents without checking occlusion. The next render uses the smoke test's
+640 × 140 viewer and crops the 32 px icon grid above the toolbar. Geometry and
+pixel checks must reject missing providers, covered icons and stray toolbar
+edges. The merged row represents all three providers in one meter; the other
+two rows must visibly show Codex, Claude and Antigravity. Review the individual
+native strips and full viewer windows alongside the final comparison.

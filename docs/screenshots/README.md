@@ -19,8 +19,10 @@ all sides, sampled from an empty part of its rendered background. This removes
 the faint seam without inventing a frame or recoloring the widget. Content is
 never enlarged, shrunk or cut to fit a canvas. Popup and setup heights follow
 their measured content; settings windows are resized before capture so the
-footer stays in place and empty space is reduced. Every panel strip comes from
-a 44-logical-pixel-high Plasma panel, retaining its native icon size.
+footer stays in place and empty space is reduced. Panels use the smoke test's
+640 × 140 logical-pixel viewer, keeping its toolbar below the icon strip. Only
+the native 32 px icon grid is cropped; 6 logical pixels of canvas above and
+below give each row the spacing of a normal 44 px panel.
 
 | File | Native PNG size | Placement and purpose |
 |---|---|---|
@@ -28,7 +30,7 @@ a 44-logical-pixel-high Plasma panel, retaining its native icon size.
 | `overview-light.png` | Expected 744 × 816 | Light README hero and Store light-theme view, with identical data and layout. |
 | `provider-codex.png` | Expected 744 × ≈1296 | Gallery/Store only: session, weekly and Spark windows, resets, pace, costs, operational status and Pro plan. No account line. |
 | `panel-modes.png` | Widest strip + 64 px × 512 | README and Store: merged meter, per-provider critters, logos with percentages/countdowns. Three native captures with captions outside the UI. Replaces both old logo examples with one comparison. |
-| `settings-general.png` | 1920 × 1984 | Gallery/Store only: complete General page, including the custom CLI path field with its built-in placeholder. Replaces `panel-display-mode-settings.png`. |
+| `settings-general.png` | 1920 × 2304 | Gallery/Store only: complete General page, including Notifications at their defaults and the custom CLI path field with its built-in placeholder. Replaces `panel-display-mode-settings.png`. |
 | `settings-providers.png` | 1920 × 800 | Gallery/Store only: enabled providers, shared config.json and the current release's `Config: Auto` / `Config: OAuth` choices. |
 | `cli-setup-light.png` | Card bounds + 64 px per dimension | Gallery/Store only: the real CLI setup card with **Install CodexBar CLI**, under Breeze Light. The CLI is intentionally unavailable; no installation is performed. |
 
@@ -85,9 +87,15 @@ Checks cover the frozen clock, theme, scale, font, correct CLI/config state,
 providers, selected page, percentages, countdowns and cost. Email/account
 lines, clipping, overflow, unexpected loading/errors, unchanged clicks and
 unstable pixels fail the job. The intentional missing-CLI state is allowed
-only for the setup shot. Three equal frames precede each capture. QML errors
-use the smoke test's boundary: widget files and applet/containment load failures
-are fatal; upstream Plasma/Kirigami warnings remain in the logs. The container
+only for the setup shot. Three equal frames precede each capture. Panel checks
+require all three provider delegates (or all three inputs to the merged meter),
+native icon dimensions, and separation from the viewer toolbar. X11 pixel
+checks reject missing/covered icons, missing logo colors and stray edges
+outside the icon/label bounds. Their measurements are saved as `*.pixels.json`.
+QML errors use the smoke test's patterns, scoped to the disposable widget
+package; applet/containment load failures are also fatal. Upstream warnings and
+the expected `cfg_configWriteError` / `cfg_configWriteErrorDefault` initial-property
+warnings remain in the logs. The container
 safe-directory, forced stderr logging and ImageMagick 7 AE parsing fixes are
 retained. The smoke test itself is unchanged by this revision.
 Capture groups run in separate shells: one failed group still fails CI, while
@@ -100,7 +108,8 @@ Send back the **whole `codexbar-screenshots-<commit SHA>` artifact**, containing
   `images/panel-modes.png`, `images/settings-general.png`,
   `images/settings-providers.png`, and `images/cli-setup-light.png`.
 - `contact-sheet.png`, `manifest.txt`, and `diagnostics/` (state JSON, native
-  windows/content, individual panel strips, logs and package versions; on
+  windows/content, individual panel strips, pixel checks, mock CLI calls,
+  logs and package versions; on
   failure, the screen and window tree too).
 
 These revisions still need a CI render and visual approval. After review,
