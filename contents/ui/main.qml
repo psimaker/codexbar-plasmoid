@@ -388,7 +388,7 @@ PlasmoidItem {
         if (!ts)
             return true
         var maxAge = Math.max(1, Plasmoid.configuration.refreshIntervalMinutes) * 60000 * 3
-        return (Date.now() - ts) > maxAge
+        return (nowMs - ts) > maxAge
     }
 
     function keyProviderIds() {
@@ -854,7 +854,7 @@ PlasmoidItem {
         if (d.error && d.error.length > 0)
             return true
         var maxAge = Math.max(1, Plasmoid.configuration.refreshIntervalMinutes) * 60000 * 3
-        return (Date.now() - d.fetchedAt) > maxAge
+        return (nowMs - d.fetchedAt) > maxAge
     }
 
     P5Support.DataSource {
@@ -870,14 +870,12 @@ PlasmoidItem {
     }
 
     Timer {
-        // drives "Resets in …" countdowns and staleness
+        // Drives "Resets in …" countdowns, staleness and today's cost, which
+        // read nowMs. The data revision stays, so cards are not rebuilt.
         interval: 30000
         running: true
         repeat: true
-        onTriggered: {
-            root.nowMs = Date.now()
-            root.bump()
-        }
+        onTriggered: root.nowMs = Date.now()
     }
 
     Timer {

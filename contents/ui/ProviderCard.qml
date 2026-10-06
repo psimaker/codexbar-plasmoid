@@ -158,7 +158,8 @@ ColumnLayout {
         plasmoidRoot.rev
         if (!d || !d.cost || !d.cost.daily)
             return null
-        var now = new Date()
+        // follows the clock so the day rolls over at midnight
+        var now = new Date(plasmoidRoot.nowMs)
         var key = now.getFullYear() + "-"
                 + ("0" + (now.getMonth() + 1)).slice(-2) + "-"
                 + ("0" + now.getDate()).slice(-2)
