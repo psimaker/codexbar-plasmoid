@@ -280,6 +280,23 @@ assert.equal(catalog.panelWindow(Object.assign({}, monthly,
     assert.equal(catalog.amountText(NaN, "USD"), "")
 }
 
+// The windows notifications watch: the card's windows with a reading.
+assert.deepEqual(plain(catalog.notificationWindows(scoped, "claude")), [
+    { key: "primary", label: "Session", remaining: 88, resetsAt: "" },
+    { key: "secondary", label: "Weekly", remaining: 60, resetsAt: "" },
+    { key: "extra:claude-weekly-scoped-fable", label: "Fable only", remaining: 12, resetsAt: "" },
+])
+assert.deepEqual(plain(catalog.notificationWindows(
+    { primary: { usedPercent: 30, windowMinutes: 300, resetsAt: "2026-10-06T15:00:00Z" } }, "codex")),
+    [{ key: "primary", label: "Session", remaining: 70, resetsAt: "2026-10-06T15:00:00Z" }])
+// Antigravity's quota summary replaces its family slots, as on the card
+assert.deepEqual(plain(catalog.notificationWindows(antigravity, "antigravity").map((w) => w.key)), [
+    "extra:antigravity-quota-summary-gemini-5h",
+    "extra:antigravity-quota-summary-gemini-weekly",
+    "extra:antigravity-quota-summary-3p-5h",
+])
+assert.deepEqual(plain(catalog.notificationWindows(null, "codex")), [])
+
 // Reset countdown (#30): the window behind the panel percentage
 const countdownNow = Date.parse("2026-09-30T12:00:00Z")
 const pickAt = (resetsAt) => ({ remaining: 60, window: { usedPercent: 40, resetsAt } })

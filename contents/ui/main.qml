@@ -4,10 +4,12 @@ import org.kde.plasma.plasmoid
 import org.kde.plasma.core as PlasmaCore
 import org.kde.plasma.plasma5support as P5Support
 import org.kde.kirigami as Kirigami
+import org.kde.notification
 import "code/catalog.js" as Catalog
 import "code/claudeAccounts.js" as ClaudeAccounts
 import "code/cliStatus.js" as CliStatus
 import "code/configProviders.js" as ConfigProviders
+import "code/notifications.js" as Notifications
 import "code/providerSources.js" as ProviderSources
 import "code/usageProbes.js" as UsageProbes
 
@@ -90,6 +92,8 @@ PlasmoidItem {
     property var requestGen: ({})
     // One usage probe per provider at a time (UsageProbes).
     property var probes: UsageProbes.initialState()
+    // What the opt-in notifications last saw per provider (Notifications).
+    property var notificationState: ({})
 
     // Optional schema-v1 claude-swap-compatible adapter state. Normal Claude
     // usage/cost queries remain active for the panel, overview and fallback UI.
@@ -825,6 +829,7 @@ PlasmoidItem {
                 cliState = CliStatus.applyUsageResult(
                     cliState, req.cliGeneration, exitCode, false, parseFailed)
             }
+            notifyChanges(req.p)
             bump()
             return
         }
@@ -849,6 +854,63 @@ PlasmoidItem {
                 dc.costUpdatedAt = Date.now()
             }
             bump()
+        }
+    }
+
+    // ---- notifications ----
+    // A provider's latest answer as the notification rules read it: failed
+    // without usage, with an error, or with more than one account.
+    function notificationRow(p) {
+        var d = usageData[p]
+        if (!d || d.error || !d.entry || !d.entry.usage || (d.entries && d.entries.length > 1))
+            return { failed: true }
+        var status = d.entry.status || {}
+        return {
+            failed: false,
+            windows: Catalog.notificationWindows(d.entry.usage, p),
+            statusLevel: typeof status.indicator === "string" ? status.indicator : "",
+            statusText: typeof status.description === "string" ? status.description : ""
+        }
+    }
+
+    function notifyChanges(p) {
+        var row = notificationRow(p)
+        var result = Notifications.transition(notificationState, p, row, {
+            threshold: Plasmoid.configuration.notifyThreshold,
+            quota: Plasmoid.configuration.notifyQuota,
+            status: Plasmoid.configuration.notifyStatus
+        })
+        notificationState = result.state
+        for (var i = 0; i < result.events.length; i++)
+            sendNotification(result.events[i], row)
+    }
+
+    function notificationText(event, row) {
+        if (event.kind === "low")
+            return i18n("%1: %2% left", event.label, event.remaining)
+        if (event.kind === "reset")
+            return i18n("%1 was reset: %2% left", event.label, event.remaining)
+        if (event.level === "none")
+            return i18n("The service has recovered.")
+        return row.statusText !== "" ? row.statusText : i18n("Service status: %1", event.level)
+    }
+
+    function sendNotification(event, row) {
+        var notification = notificationComponent.createObject(root, {
+            title: Catalog.meta(event.provider).name,
+            text: notificationText(event, row)
+        })
+        if (notification)
+            notification.sendEvent()
+    }
+
+    Component {
+        id: notificationComponent
+        Notification {
+            componentName: "plasma_workspace"
+            eventId: "notification"
+            iconName: Plasmoid.icon
+            autoDelete: true
         }
     }
 
