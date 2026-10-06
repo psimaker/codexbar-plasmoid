@@ -184,6 +184,57 @@ assert.equal(catalog.panelWindow({ primary: { usedPercent: 10, windowMinutes: 30
 assert.equal(catalog.panelWindow({}, "codex", "lowest"), null)
 assert.equal(catalog.panelWindow(null, "codex", "session"), null)
 
+// Only a finite usedPercent is a reading; null, NaN or a string are none.
+for (const usedPercent of [null, NaN, Infinity, "40", undefined]) {
+    assert.equal(catalog.windowUsageKnown({ usedPercent }), false, String(usedPercent))
+    assert.equal(catalog.windowRemainingText({ usedPercent }), "–")
+    assert.equal(catalog.panelWindow({ primary: { usedPercent, windowMinutes: 300 } }, "codex", "session"), null)
+}
+assert.equal(catalog.windowUsageKnown({ usedPercent: 0 }), true)
+assert.equal(catalog.windowUsageKnown(null), false)
+
+// "lowest" weighs a monthly window in any slot; other sources do not.
+const monthly = {
+    primary: { usedPercent: 20, windowMinutes: 300 },
+    secondary: { usedPercent: 30, windowMinutes: 10080 },
+    tertiary: { usedPercent: 95, windowMinutes: 43200 },
+}
+assert.equal(catalog.panelWindow(monthly, "codex", "lowest").remaining, 5)
+assert.equal(catalog.panelWindow(monthly, "codex", "session").remaining, 80)
+assert.equal(catalog.panelWindow(monthly, "codex", "weekly").remaining, 70)
+// a tertiary window that is not monthly, or not known, stays out
+assert.equal(catalog.panelWindow(Object.assign({}, monthly,
+    { tertiary: { usedPercent: 95, windowMinutes: 10080 } }), "claude", "lowest").remaining, 70)
+assert.equal(catalog.panelWindow(Object.assign({}, monthly,
+    { tertiary: { usedPercent: null, windowMinutes: 43200 } }), "codex", "lowest").remaining, 70)
+
+// The merged meter is stale when a value it shows comes from a stale
+// provider, and without any value when every provider is.
+{
+    const picks = {
+        codex: { session: { remaining: 40 }, weekly: { remaining: 90 } },
+        claude: { session: { remaining: 70 }, weekly: { remaining: 10 } },
+        gemini: { session: { remaining: 95 }, weekly: { remaining: 95 } },
+    }
+    const pickOf = (p, source) => (picks[p] || {})[source] || null
+    const staleOf = (stale) => (p) => stale.includes(p)
+    const providers = ["codex", "claude", "gemini"]
+    const sources = ["session", "weekly"]
+    // Gemini shows nothing, so its staleness does not matter
+    assert.equal(catalog.mergedStale(providers, sources, pickOf, staleOf(["gemini"])), false)
+    // Claude's weekly value is shown: its staleness does
+    assert.equal(catalog.mergedStale(providers, sources, pickOf, staleOf(["claude"])), true)
+    assert.equal(catalog.mergedStale(providers, sources, pickOf, staleOf(["codex"])), true)
+    // the percentage's source counts as well
+    picks.gemini.lowest = { remaining: 1 }
+    assert.equal(catalog.mergedStale(providers, sources.concat(["lowest"]), pickOf, staleOf(["gemini"])), true)
+    // no value: stale only when every provider is
+    const none = () => null
+    assert.equal(catalog.mergedStale(providers, sources, none, staleOf(["codex", "claude"])), false)
+    assert.equal(catalog.mergedStale(providers, sources, none, staleOf(providers)), true)
+    assert.equal(catalog.mergedStale([], sources, none, staleOf([])), true)
+}
+
 // Reset countdown (#30): the window behind the panel percentage
 const countdownNow = Date.parse("2026-09-30T12:00:00Z")
 const pickAt = (resetsAt) => ({ remaining: 60, window: { usedPercent: 40, resetsAt } })
