@@ -1,0 +1,30 @@
+[
+  {
+    "provider": "antigravity",
+    "source": "oauth",
+    "status": {"indicator": "none", "description": "All Systems Operational"},
+    "usage": {
+      "primary": {"usedPercent": 19, "windowMinutes": 300, "resetsAt": "@IN_1H@"},
+      "secondary": {"usedPercent": 8, "windowMinutes": 300, "resetsAt": "@IN_5H@"},
+      "extraRateWindows": [
+        {
+          "id": "antigravity-quota-summary-gemini-5h", "title": "Gemini 5-hour",
+          "window": {"usedPercent": 19, "windowMinutes": 300, "resetsAt": "@IN_1H@"}
+        },
+        {
+          "id": "antigravity-quota-summary-gemini-weekly", "title": "Gemini weekly",
+          "window": {"usedPercent": 31, "windowMinutes": 10080, "resetsAt": "@IN_3D@"}
+        },
+        {
+          "id": "antigravity-quota-summary-3p-5h", "title": "Claude/GPT 5-hour",
+          "window": {"usedPercent": 8, "windowMinutes": 300, "resetsAt": "@IN_5H@"}
+        },
+        {
+          "id": "antigravity-quota-summary-3p-weekly", "title": "Claude/GPT weekly",
+          "window": {"usedPercent": 12, "windowMinutes": 10080, "resetsAt": "@IN_6D@"}
+        }
+      ],
+      "updatedAt": "@NOW@"
+    }
+  }
+]

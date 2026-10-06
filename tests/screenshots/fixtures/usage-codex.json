@@ -1,0 +1,20 @@
+[
+  {
+    "provider": "codex",
+    "source": "oauth",
+    "status": {"indicator": "none", "description": "All Systems Operational"},
+    "usage": {
+      "primary": {"usedPercent": 28, "windowMinutes": 300, "resetsAt": "@IN_3H50M@"},
+      "secondary": {"usedPercent": 36, "windowMinutes": 10080, "resetsAt": "@IN_4D@"},
+      "extraRateWindows": [
+        {
+          "id": "codex-spark",
+          "title": "Codex Spark",
+          "window": {"usedPercent": 18, "windowMinutes": 300, "resetsAt": "@IN_3H50M@"}
+        }
+      ],
+      "updatedAt": "@NOW@",
+      "identity": {"accountEmail": "alex@example.com", "loginMethod": "pro"}
+    }
+  }
+]

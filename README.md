@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/screenshots/codexbar-plasma.png" width="360" alt="CodexBar widget in a KDE Plasma panel with the popup open">
+<img src="docs/screenshots/overview.png" width="448" height="448" alt="CodexBar overview with Codex, Claude and Antigravity session and weekly quotas in Breeze Dark">
 
 # CodexBar for KDE Plasma 6
 
@@ -51,10 +51,17 @@ Options: `--widget-only`, `--cli-only`, `--version v0.6.1`. The scripts are plai
 - **Optional Claude multi-account view.** Stacked 5-hour and 7-day cards per account with explicit switching through a schema-v1 [`claude-swap`](https://github.com/realiti4/claude-swap) adapter.
 
 <div align="center">
-<img src="docs/screenshots/panel-display-mode-settings.png" width="520" alt="Panel display settings: meters, provider logos, or both">
+<img src="docs/screenshots/provider-codex.png" width="448" height="768" alt="Codex provider page with session, weekly and Spark quotas, reset countdowns, pace, cost and operational status">
 <br>
-<img src="docs/screenshots/provider-logos-horizontal.png" alt="Provider logos in a horizontal panel">&nbsp;&nbsp;
-<img src="docs/screenshots/provider-logos-vertical.png" height="120" alt="Provider logos in a vertical panel">
+<img src="docs/screenshots/panel-meters.png" width="480" height="176" alt="Merged quota meter above separate provider meters with the Codex and Claude critters">
+<br>
+<img src="docs/screenshots/panel-logos-horizontal.png" width="576" height="64" alt="Codex, Claude and Antigravity logos with remaining percentages and reset countdowns in a horizontal panel">
+<br>
+<img src="docs/screenshots/panel-logos-vertical.png" width="128" height="160" alt="Provider logos with remaining percentages and stacked reset countdowns in a vertical panel">
+<br>
+<img src="docs/screenshots/settings-general.png" width="600" height="920" alt="Complete General settings for panel display, usage bars, click actions, costs and CLI configuration">
+<br>
+<img src="docs/screenshots/settings-providers.png" width="600" height="360" alt="Providers settings reading CodexBar config.json, filtered to enabled providers with source choices and panel override buttons">
 </div>
 
 <details>

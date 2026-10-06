@@ -26,40 +26,9 @@ xvfb_pid=$!
 trap 'kill "$xvfb_pid" 2>/dev/null || true' EXIT
 sleep 2
 
-# package NAME KEY=VALUE... prints the path of a copy of the widget whose
-# config defaults are replaced, so every scenario starts from a known state.
-package() {
-    local dir="$work/pkg-$1"
-    shift
-    mkdir -p "$dir"
-    cp -r "$repo/metadata.json" "$repo/contents" "$dir/"
-    local xml="$dir/contents/config/main.xml" pair key value
-    for pair in "$@"; do
-        key="${pair%%=*}"
-        value="${pair#*=}"
-        awk -v key="$key" -v value="$value" '
-            index($0, "<entry name=\"" key "\"") { hit = 1 }
-            hit && /<default>/ { sub(/<default>.*<\/default>/, "<default>" value "</default>"); hit = 0 }
-            { print }
-        ' "$xml" >"$xml.new"
-        mv "$xml.new" "$xml"
-        grep -q -F "<default>$value</default>" "$xml" || { echo "unknown setting: $key" >&2; return 1; }
-    done
-    echo "$dir"
-}
+source "$repo/tests/smoke/helpers.sh"
 
 failed=0
-
-# expect_config ID... checks that the mock config.json enables exactly these.
-expect_config() {
-    local want have
-    want="$(printf '%s\n' "$@" | sort | tr '\n' ' ')"
-    have="$({ cat "$CODEXBAR_MOCK_STATE" 2>/dev/null || echo codex; } | sort | tr '\n' ' ')"
-    if [[ "$want" != "$have" ]]; then
-        echo "config.json enables [$have], expected [$want]" >&2
-        failed=1
-    fi
-}
 
 # expect_extent NAME height|width MIN MAX CROP checks how tall (horizontal
 # panel) or wide (vertical panel) the widget draws in a panel scenario: the

@@ -1,0 +1,8 @@
+[
+  {
+    "provider": "codex",
+    "daily": [{"date": "@TODAY@", "totalCost": 2.84, "totalTokens": 184200}],
+    "last30DaysCostUSD": 47.62,
+    "last30DaysTokens": 3120000
+  }
+]
