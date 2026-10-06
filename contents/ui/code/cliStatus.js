@@ -4,6 +4,9 @@ var MINIMUM_VERSION = "0.43.0"
 // From this release on the widget reads and writes the provider list in
 // CodexBar's config.json; older CLI config writes dropped plugin settings.
 var CONFIG_SOURCE_VERSION = "0.66.0"
+// From this release on `codexbar config set-source` stores a provider's data
+// source in config.json (steipete/CodexBar#4142).
+var CONFIG_SET_SOURCE_VERSION = "0.72.1"
 
 var UNKNOWN = "unknown"
 var CHECKING = "checking"
@@ -192,6 +195,11 @@ function applyUsageResult(state, generation, exitCode, hasUsage, parseFailed) {
 
 function supportsConfigSource(version) {
     var order = compareVersions(version, CONFIG_SOURCE_VERSION)
+    return order !== null && order >= 0
+}
+
+function supportsConfigSetSource(version) {
+    var order = compareVersions(version, CONFIG_SET_SOURCE_VERSION)
     return order !== null && order >= 0
 }
 

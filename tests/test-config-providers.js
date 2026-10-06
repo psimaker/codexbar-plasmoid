@@ -364,4 +364,131 @@ for (const lateRead of [false, true]) {
     assert.deepEqual(plain(done.action.steps), ["disable --provider claude", "enable --provider gemini"])
 }
 
+// ---- sources in config.json (`config set-source`, CodexBar 0.72.1) ----
+// config.json storing `sources` (by CodexBar id) and enabling `on`.
+function sourceList(sources, on = ["codex", "claude"]) {
+    const ids = ["codex", "claude", "cursor", "groq"]
+    return lib.parse(JSON.stringify(ids.map((id) => ({
+        displayName: id, enabled: on.includes(id), provider: id, defaultEnabled: id === "codex",
+    }))), JSON.stringify({ providers: Object.entries(sources).map(([id, source]) => ({ id, source })) }),
+    catalog.cliProviderId)
+}
+
+// The settings page offers the same sources.
+{
+    const sources = load("providerSources.js")
+    assert.deepEqual(plain(lib.SETTABLE_SOURCES),
+        plain(sources.SOURCES).filter((s) => s !== sources.DEFAULT_SOURCE))
+}
+
+{
+    const stored = sourceList({ claude: "oauth", cursor: "localprobe" })
+    // the settings page mirrors the stored sources it knows
+    assert.deepEqual(plain(lib.storedSources(stored)), { claude: "oauth" })
+    // set-source steps in list order; a provider left out wants auto
+    assert.deepEqual(plain(lib.sourceChanges(stored, { claude: "oauth" })), [])
+    assert.deepEqual(plain(lib.sourceChanges(stored, { codex: "api", groqcloud: "api" })), [
+        "set-source --provider codex --source api",
+        "set-source --provider claude --source auto",
+        "set-source --provider groqcloud --source api",
+    ])
+    // a stored source the widget does not know stays until another is picked
+    assert.deepEqual(plain(lib.sourceChanges(stored, { claude: "oauth", cursor: "web" })),
+        ["set-source --provider cursor --source web"])
+    // providers config.json does not list are left alone
+    assert.deepEqual(plain(lib.sourceChanges(stored, { claude: "oauth", gemini: "api" })), [])
+    // the widget's own sources go to providers without a stored one only
+    assert.deepEqual(plain(lib.migratedSources(stored, { codex: "api", claude: "cli", cursor: "api" })),
+        { claude: "oauth", codex: "api" })
+    assert.deepEqual(plain(lib.sourceChanges(stored,
+        lib.migratedSources(stored, { codex: "api", claude: "cli", cursor: "api" }))),
+        ["set-source --provider codex --source api"])
+}
+
+// An Apply writes its enable/disable and set-source steps in one go; one
+// made while a write runs waits with its sources. Without sources, an Apply
+// leaves the stored ones alone.
+{
+    let sync = lib.syncState()
+    let r = lib.request(sync, sourceList({ claude: "oauth" }), ["codex", "claude", "cursor"], true, false,
+        { claude: "cli" })
+    sync = r.state
+    const first = r.write
+    assert.deepEqual(plain(first.steps),
+        ["enable --provider cursor", "set-source --provider claude --source cli"])
+    assert.equal(first.sourceMigration, false)
+    r = lib.request(sync, sourceList({ claude: "oauth" }), ["codex", "claude"], true, false,
+        { claude: "oauth", codex: "api" })
+    sync = r.state
+    assert.equal(r.write, null)
+    const done = lib.read(sync, lib.readBack(sync, first),
+        sourceList({ claude: "cli" }, ["codex", "claude", "cursor"]), true, [], null)
+    assert.equal(done.action.type, "write")
+    assert.deepEqual(plain(done.action.steps), [
+        "disable --provider cursor",
+        "set-source --provider codex --source api",
+        "set-source --provider claude --source oauth",
+    ])
+    assert.equal(lib.request(lib.syncState(), sourceList({ claude: "oauth" }), ["codex", "claude"],
+        true, false).write, null)
+}
+
+// With a CLI that stores sources, the first read moves the widget's own
+// sources once, and the read-back reports the move as done.
+{
+    const widget = { codex: "api", claude: "cli" }
+    const first = lib.refresh(lib.syncState(), true)
+    let done = lib.read(first.state, first.read, sourceList({ claude: "oauth" }), true, [], widget)
+    let sync = done.state
+    assert.equal(done.action.type, "write")
+    assert.equal(done.action.sourceMigration, true)
+    assert.equal(done.action.migration, false)
+    assert.deepEqual(plain(done.action.steps), ["set-source --provider codex --source api"])
+    done = lib.read(sync, lib.readBack(sync, done.action), sourceList({ claude: "oauth", codex: "api" }),
+        true, [], widget)
+    assert.equal(done.action.type, "show")
+    assert.equal(done.action.sourcesMigrated, true)
+    assert.equal(done.state.writing, false)
+    // nothing to move: done at once
+    const none = lib.read(lib.syncState(), lib.refresh(lib.syncState(), true).read,
+        sourceList({ claude: "oauth" }), true, [], { claude: "cli" })
+    assert.equal(none.action.type, "show")
+    assert.equal(none.action.sourcesMigrated, true)
+    // an older CLI, or sources moved before: nothing to report
+    const older = lib.read(lib.syncState(), lib.refresh(lib.syncState(), true).read,
+        sourceList({}), true, [], null)
+    assert.equal(older.action.sourcesMigrated, false)
+}
+
+// A fresh widget moves its providers first and its sources right after.
+{
+    const widget = { claude: "cli" }
+    const first = lib.refresh(lib.syncState(), true)
+    let done = lib.read(first.state, first.read, sourceList({}, ["codex"]), false, ["codex", "claude"], widget)
+    let sync = done.state
+    assert.equal(done.action.migration, true)
+    assert.deepEqual(plain(done.action.steps), ["enable --provider claude"])
+    done = lib.read(sync, lib.readBack(sync, done.action), sourceList({}), false, ["codex", "claude"], widget)
+    sync = done.state
+    assert.equal(done.action.type, "write")
+    assert.equal(done.action.migrated, true)
+    assert.equal(done.action.sourceMigration, true)
+    assert.deepEqual(plain(done.action.steps), ["set-source --provider claude --source cli"])
+    done = lib.read(sync, lib.readBack(sync, done.action), sourceList({ claude: "cli" }), true,
+        ["codex", "claude"], widget)
+    assert.equal(done.action.type, "show")
+    assert.equal(done.action.sourcesMigrated, true)
+}
+
+// A failed move keeps the widget's sources for the session: main.qml reads
+// back without sources to move, so nothing reports them as moved.
+{
+    const first = lib.refresh(lib.syncState(), true)
+    let done = lib.read(first.state, first.read, sourceList({}), true, [], { codex: "api" })
+    const sync = done.state
+    done = lib.read(sync, lib.readBack(sync, done.action), sourceList({}), true, [], null)
+    assert.equal(done.action.type, "show")
+    assert.equal(done.action.sourcesMigrated, false)
+}
+
 console.log("Config provider tests passed")
