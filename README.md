@@ -42,7 +42,7 @@ Then right-click your panel → **Add Widgets…** → search **CodexBar**. That
 > [!TIP]
 > Already have the widget? It installs and updates the CLI by itself: the popup shows an **Install CodexBar CLI** button when the CLI is missing or too old, and **About CodexBar** offers **Update CodexBar CLI to the latest release**.
 
-Options: `--widget-only`, `--cli-only`, `--version v0.6.1`. The scripts are plain POSIX `sh`, so read them first if you like: [`scripts/install.sh`](scripts/install.sh) and [`contents/scripts/install-cli.sh`](contents/scripts/install-cli.sh). Manual and package-manager routes are [below](#other-ways-to-install).
+Options: `--widget-only`, `--cli-only`, `--version v0.7.0`. The scripts are plain POSIX `sh`, so read them first if you like: [`scripts/install.sh`](scripts/install.sh) and [`contents/scripts/install-cli.sh`](contents/scripts/install-cli.sh). Manual and package-manager routes are [below](#other-ways-to-install).
 
 ## ✨ Features
 
