@@ -43,6 +43,8 @@ Timer {
                 result.actions["menu:" + item.label] = center
             if (typeof item.text === "string" && item.text !== "") {
                 result.texts.push(item.text)
+                if (item.clicked !== undefined && !clipped(item))
+                    result.buttons[item.text] = item.enabled
                 if (!clipped(item) && result.actions["text:" + item.text] === undefined)
                     result.actions["text:" + item.text] = center
                 if (item.truncated === true || clipped(item))
@@ -61,14 +63,17 @@ Timer {
         var result = {
             kind: kind, time: Date.now(), scale: target.Screen.devicePixelRatio,
             window: { width: win.width, height: win.height },
-            rect: rect(subject), texts: [], clipped: [], actions: {},
+            rect: rect(subject), texts: [], clipped: [], actions: {}, buttons: {},
             background: Kirigami.Theme.backgroundColor.toString(),
             font: Kirigami.Theme.defaultFont.family,
             pointSize: Kirigami.Theme.defaultFont.pointSize
         }
-        if (kind === "popup" || kind === "panel") {
+        if (kind === "popup" || kind === "panel" || kind === "setup") {
             var root = target.plasmoidRoot
             result.configMode = root.configMode
+            result.cliState = root.cliState.code
+            result.installRunning = root.cliInstallRunning
+            result.installExitCode = root.cliInstallExitCode
             result.tab = root.currentTab
             result.providers = root.enabledProviders
             result.data = root.enabledProviders.map(function (id) {
@@ -80,7 +85,14 @@ Timer {
                 result.icons = target.iconModel
                 result.mode = target.displayMode
                 result.vertical = target.vertical
-            } else {
+                result.panelHeight = win.height
+                result.iconSide = target.iconSide
+                result.percentVisible = target.showPercentFor(target.iconModel[0])
+                // Preserve the real panel thickness, including its native
+                // vertical padding, without exporting empty containment space.
+                result.rect.y = 0
+                result.rect.height = win.height
+            } else if (kind === "popup") {
                 result.overflow = viewport.contentHeight > viewport.height + 1
             }
             inspect(subject, result)

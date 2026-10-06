@@ -1,6 +1,9 @@
 <div align="center">
 
-<img src="docs/screenshots/overview.png" width="448" height="448" alt="CodexBar overview with Codex, Claude and Antigravity session and weekly quotas in Breeze Dark">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/overview.png">
+  <img src="docs/screenshots/overview-light.png" width="372" alt="CodexBar overview with Codex, Claude and Antigravity session and weekly quotas">
+</picture>
 
 # CodexBar for KDE Plasma 6
 
@@ -51,17 +54,9 @@ Options: `--widget-only`, `--cli-only`, `--version v0.6.1`. The scripts are plai
 - **Optional Claude multi-account view.** Stacked 5-hour and 7-day cards per account with explicit switching through a schema-v1 [`claude-swap`](https://github.com/realiti4/claude-swap) adapter.
 
 <div align="center">
-<img src="docs/screenshots/provider-codex.png" width="448" height="768" alt="Codex provider page with session, weekly and Spark quotas, reset countdowns, pace, cost and operational status">
+<a href="docs/screenshots/README.md"><img src="docs/screenshots/panel-modes.png" width="512" alt="CodexBar at normal panel size: merged meter, per-provider meters with Codex and Claude critters, and logos with percentages and reset countdowns"></a>
 <br>
-<img src="docs/screenshots/panel-meters.png" width="480" height="176" alt="Merged quota meter above separate provider meters with the Codex and Claude critters">
-<br>
-<img src="docs/screenshots/panel-logos-horizontal.png" width="576" height="64" alt="Codex, Claude and Antigravity logos with remaining percentages and reset countdowns in a horizontal panel">
-<br>
-<img src="docs/screenshots/panel-logos-vertical.png" width="128" height="160" alt="Provider logos with remaining percentages and stacked reset countdowns in a vertical panel">
-<br>
-<img src="docs/screenshots/settings-general.png" width="600" height="920" alt="Complete General settings for panel display, usage bars, click actions, costs and CLI configuration">
-<br>
-<img src="docs/screenshots/settings-providers.png" width="600" height="360" alt="Providers settings reading CodexBar config.json, filtered to enabled providers with source choices and panel override buttons">
+<a href="docs/screenshots/README.md">Provider detail, settings, and CLI setup screenshots</a>
 </div>
 
 <details>

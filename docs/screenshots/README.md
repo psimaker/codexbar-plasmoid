@@ -1,74 +1,114 @@
-# Screenshot candidates
+# Screenshot gallery and capture notes
 
-Use one Breeze Dark set, with Noto Sans 10 pt (8 pt secondary text), native
-`QT_SCALE_FACTOR=2`, UTC and a frozen clock at 2026-10-06 12:00. Dark neutral
-surfaces keep the provider colors clear on either GitHub background without
-doubling the review set. No wallpaper, other applets, window decorations or
-cursor. Every canvas has at least 16 logical pixels of clear space; images
-are cropped from native renders and padded, never enlarged.
+The README uses just two visual blocks: an overview that follows GitHub's
+`prefers-color-scheme` setting, and a compact comparison of panel modes.
+Detailed controls belong here, where readers can open them at full resolution.
+All seven files below are also candidates for maintainer review for the KDE
+Store. The [review of the first renders](review.md) explains the revisions.
 
-All usage, costs, status and identities are fictional. Codex and Claude use
-`alex@example.com`. The settings fields retain their neutral built-in
-placeholders. The usage bars show remaining quota throughout.
+## Art direction
 
-| Candidate | Pixels (2×) | Demonstrates / replaces |
-|---|---:|---|
-| `overview.png` | 896 × 896 | Codex, Claude and Antigravity with session/weekly bars in their brand colors. Replaces the hero `codexbar-plasma.png`. |
-| `provider-codex.png` | 896 × 1536 | Session, weekly and Codex Spark windows, reset countdowns, computed pace, today/30-day cost, operational status and neutral identity. Adds the detail promised by the Features text. |
-| `panel-meters.png` | 960 × 352 | Two actual panel captures: one merged meter and separate meters, including the Codex/Claude critters. Captions sit outside the captures. Adds the two default meter layouts. |
-| `panel-logos-horizontal.png` | 1152 × 128 | Logos, remaining percentages and reset countdowns. Replaces `provider-logos-horizontal.png`. |
-| `panel-logos-vertical.png` | 256 × 320 | The same data in a narrow panel with stacked countdowns. Replaces `provider-logos-vertical.png`. |
-| `settings-general.png` | 1920 × 2944 | The complete current General page, including actions, cost and CLI controls. Replaces `panel-display-mode-settings.png`; the taller canvas avoids clipping the expanded settings. |
-| `settings-providers.png` | 1920 × 1152 | The actual Providers page reading the mock CLI's config.json, with Show enabled only selected, configured sources and override buttons. Adds the shared-config behavior. |
+Use stock Breeze Dark and Breeze Light, Noto Sans 10 pt (8 pt secondary text),
+native `QT_SCALE_FACTOR=2`, UTC and a frozen clock at 2026-10-06 12:00. Keep the
+widget's own typography, colors, icons and spacing. No wallpaper, unrelated
+applets, window decorations or cursor. All data is fictional; fixtures contain
+plans but no email addresses or account identifiers. Bars show remaining quota.
 
-The popup shots capture the widget's real FullView inside plasmoidviewer.
-Panels use Plasma's panel containment; settings use Plasma's configuration
-window. There is no recreated UI. `Probe.qml` is an observer added to disposable
-package copies only: it reports loaded data, visible text, click targets and
-capture bounds. It neither draws nor changes widget state. Navigation uses
-real X11 clicks. The original checkout's QML is unchanged.
+Each capture has exactly 32 physical pixels (16 logical pixels) of padding on
+all sides, sampled from an empty part of its rendered background. This removes
+the faint seam without inventing a frame or recoloring the widget. Content is
+never enlarged, shrunk or cut to fit a canvas. Popup and setup heights follow
+their measured content; settings windows are resized before capture so the
+footer stays in place and empty space is reduced. Every panel strip comes from
+a 44-logical-pixel-high Plasma panel, retaining its native icon size.
+
+| File | Native PNG size | Placement and purpose |
+|---|---|---|
+| `overview.png` | Expected 744 × 816 | Dark README hero and Store overview: three providers with session/weekly bars. Replaces `codexbar-plasma.png`. |
+| `overview-light.png` | Expected 744 × 816 | Light README hero and Store light-theme view, with identical data and layout. |
+| `provider-codex.png` | Expected 744 × ≈1296 | Gallery/Store only: session, weekly and Spark windows, resets, pace, costs, operational status and Pro plan. No account line. |
+| `panel-modes.png` | Widest strip + 64 px × 512 | README and Store: merged meter, per-provider critters, logos with percentages/countdowns. Three native captures with captions outside the UI. Replaces both old logo examples with one comparison. |
+| `settings-general.png` | 1920 × 1984 | Gallery/Store only: complete General page, including the custom CLI path field with its built-in placeholder. Replaces `panel-display-mode-settings.png`. |
+| `settings-providers.png` | 1920 × 800 | Gallery/Store only: enabled providers, shared config.json and the current release's `Config: Auto` / `Config: OAuth` choices. |
+| `cli-setup-light.png` | Card bounds + 64 px per dimension | Gallery/Store only: the real CLI setup card with **Install CodexBar CLI**, under Breeze Light. The CLI is intentionally unavailable; no installation is performed. |
+
+The expected sizes describe the current layout. Actual sizes and hashes are
+recorded in `manifest.txt`; bounds checks fail if content unexpectedly grows.
+The vertical-logo example is omitted to keep the set focused. Source-selection
+UI changes, including the proposed CLI 0.72.1 behavior, should be photographed
+only after they land in the checkout being rendered.
+
+## Gallery
+
+Click any image to inspect its full-resolution PNG. The settings images are
+kept out of the main README because fitting them into a small column makes the
+labels and help text unreadable.
+
+<a href="overview.png"><img src="overview.png" width="372" alt="Dark overview with three providers and representative quotas"></a>
+<a href="overview-light.png"><img src="overview-light.png" width="372" alt="The same overview in Breeze Light"></a>
+
+<a href="panel-modes.png"><img src="panel-modes.png" width="512" alt="Three CodexBar panel modes at normal panel height"></a>
+
+<a href="provider-codex.png"><img src="provider-codex.png" width="372" alt="Codex Pro detail with three quota windows, countdowns, pace, cost and healthy status"></a>
+<a href="cli-setup-light.png"><img src="cli-setup-light.png" width="372" alt="CLI intentionally unavailable: setup card with an enabled Install CodexBar CLI button"></a>
+
+<a href="settings-general.png"><img src="settings-general.png" width="960" alt="Complete General settings, including the custom CLI path field"></a>
+
+<a href="settings-providers.png"><img src="settings-providers.png" width="960" alt="Providers settings following CodexBar config.json, filtered to the three enabled providers"></a>
 
 ## Render and review
 
 Run **Documentation screenshots** (`.github/workflows/screenshots.yml`) on a
-pull request or with `workflow_dispatch`. It uses the same Arch/Plasma packages
-as the smoke job, plus explicit KDE Qt integration, Python and libfaketime.
-On an Arch machine with those dependencies, from the checkout:
+pull request or with `workflow_dispatch`. It uses the smoke job's Arch/Plasma
+packages, plus explicit KDE Qt integration, Python and libfaketime. On an Arch
+machine with those dependencies, from the checkout:
 
 ```sh
 dbus-run-session -- bash tests/screenshots/render.sh "$PWD/dist/screenshots"
 ```
 
 The output directory must be empty. The script starts its own Xvfb and isolates
-the viewer's home, config, environment and CLI path. Only `tests/smoke/codexbar`
-supplies data. Its provider-list and config helpers are reused; screenshot
-usage/cost fixtures live in `tests/screenshots/fixtures/`. Without cost fixtures,
-the mock still returns `[]`, as the existing smoke scenarios expect.
+each viewer's home, configuration, environment and CLI path. Only the existing
+`tests/smoke/codexbar` supplies usage/config/cost data; its provider-list and
+config helpers are reused with `tests/screenshots/fixtures/`. The setup scene
+uses an explicitly nonexistent absolute executable path, so it cannot fall
+through to another installed CLI. It checks the missing state, the enabled
+Install button, and that the installer has never run.
 
-Readiness checks assert the clock, theme, scale, font, config mode, providers,
-selected page, percentages, countdowns and cost. Clipped/elided text, scroll
-overflow, loading/error text, unchanged clicks, unstable pixels and QML errors
-fail the job. Three successive equal frames precede each capture. Captures
-that exceed a planned canvas fail instead of being shrunk or cut off. The
-workflow uploads diagnostics even when it fails.
+Popups use the real FullView; panels use Plasma's panel containment; settings
+use Plasma's configuration window. The setup image crops the actual setup
+card, excluding unrelated empty quota content. `Probe.qml`, added only to
+disposable package copies, reports state, visible text, buttons and geometry.
+It draws nothing and changes no widget state. Navigation uses real X11 clicks.
 
-The artifact is `codexbar-screenshots-<commit SHA>`. Send back these files for
-visual review (or simply the whole artifact):
+Checks cover the frozen clock, theme, scale, font, correct CLI/config state,
+providers, selected page, percentages, countdowns and cost. Email/account
+lines, clipping, overflow, unexpected loading/errors, unchanged clicks and
+unstable pixels fail the job. The intentional missing-CLI state is allowed
+only for the setup shot. Three equal frames precede each capture. QML errors
+use the smoke test's boundary: widget files and applet/containment load failures
+are fatal; upstream Plasma/Kirigami warnings remain in the logs. The container
+safe-directory, forced stderr logging and ImageMagick 7 AE parsing fixes are
+retained. The smoke test itself is unchanged by this revision.
+Capture groups run in separate shells: one failed group still fails CI, while
+the other groups continue and contribute candidates and diagnostics to the
+same artifact. A failed run can therefore include a partial contact sheet.
 
-- All seven `images/*.png` named in the table.
-- `contact-sheet.png` (a reduced review aid, not a publication image).
-- `manifest.txt` and `diagnostics/` (state JSON, raw windows/content, logs and
-  installed package versions; on failure, the screen and window tree too).
+Send back the **whole `codexbar-screenshots-<commit SHA>` artifact**, containing:
 
-Successful assertions do not replace visual review. No candidates can be
-rendered in the development workspace, so the README references are staged
-for the CI images. After reviewing the downloaded candidates, copy the seven
-files from `images/` into this directory before merging. The unresized PNGs
-can also be offered for KDE Store review. Arch is rolling: the clock, fixtures
-and presentation are fixed, while exact pixels across dependency upgrades are
-not guaranteed; the artifact records the installed versions.
+- `images/overview.png`, `images/overview-light.png`, `images/provider-codex.png`,
+  `images/panel-modes.png`, `images/settings-general.png`,
+  `images/settings-providers.png`, and `images/cli-setup-light.png`.
+- `contact-sheet.png`, `manifest.txt`, and `diagnostics/` (state JSON, native
+  windows/content, individual panel strips, logs and package versions; on
+  failure, the screen and window tree too).
 
-After the maintainer approves the replacements, remove **only** these obsolete
-files (kept in the working tree until then): `codexbar-plasma.png`,
-`panel-display-mode-settings.png`, `provider-logos-horizontal.png`, and
-`provider-logos-vertical.png`.
+These revisions still need a CI render and visual approval. After review,
+copy the seven approved PNGs from `images/` here before merging; the main README
+and gallery references are staged for those files. Arch is rolling, so exact
+pixels across package upgrades are not guaranteed. Installed versions are
+recorded with the artifact.
+
+After maintainer approval, remove the four obsolete images, kept until then:
+`codexbar-plasma.png`, `panel-display-mode-settings.png`,
+`provider-logos-horizontal.png`, and `provider-logos-vertical.png`.

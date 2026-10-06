@@ -14,7 +14,7 @@
         }
       ],
       "updatedAt": "@NOW@",
-      "identity": {"accountEmail": "alex@example.com", "loginMethod": "pro"}
+      "identity": {"loginMethod": "pro"}
     }
   }
 ]
