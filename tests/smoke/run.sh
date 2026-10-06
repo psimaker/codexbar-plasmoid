@@ -44,6 +44,17 @@ expect_extent() {
     fi
 }
 
+# expect_sources "ID SOURCE"... checks the sources the mock config.json stores.
+expect_sources() {
+    local want have
+    want="$(printf '%s\n' "$@" | sort | tr '\n' ';')"
+    have="$({ cat "$CODEXBAR_MOCK_STATE.sources" 2>/dev/null || echo "claude oauth"; } | sort | tr '\n' ';')"
+    if [[ "$want" != "$have" ]]; then
+        echo "config.json stores the sources [$have], expected [$want]" >&2
+        failed=1
+    fi
+}
+
 # shoot NAME WIDTHxHEIGHT saves the screen and the widget's corner of it.
 shoot() {
     xwininfo -root -tree >"$out/$1.windows.txt" 2>&1 || true
@@ -231,6 +242,44 @@ else
 fi
 kill "$external_pid" 2>/dev/null || true
 wait "$external_pid" 2>/dev/null || true
+
+# With CLI 0.72.1 config.json holds the data sources: the widget's own
+# --source choices move there once, for providers without a stored source
+# (Codex) while a stored one wins (Claude's OAuth), and probes pass no
+# --source. The Providers page shows the stored sources, and OK, which writes
+# every key of the page, leaves config.json as it is.
+rm -f "$CODEXBAR_MOCK_STATE" "$CODEXBAR_MOCK_STATE.sources" "$CODEXBAR_MOCK_STATE.calls"
+CODEXBAR_MOCK_VERSION=0.72.1 plasmoidviewer \
+    -a "$(package sources "$three" providerSources=claude=cli,codex=api)" -s 560x860 -f planar \
+    >"$out/settings-sources.log" 2>&1 &
+sources_pid=$!
+sleep "${SMOKE_WAIT:-15}"
+expect_sources "claude oauth" "codex api"
+cp "$CODEXBAR_MOCK_STATE.calls" "$out/settings-sources.calls.txt"
+if grep -q -E ' usage .*--source' "$CODEXBAR_MOCK_STATE.calls"; then
+    echo "Probes still pass --source with the sources in config.json" >&2
+    failed=1
+fi
+xdotool mousemove 230 694 click 1
+sleep 5
+sources_window="$(xdotool search --name 'CodexBar Settings' | head -n 1)"
+if [[ -z "$sources_window" ]]; then
+    echo "The settings window did not open" >&2
+    failed=1
+else
+    xdotool windowsize "$sources_window" 1000 890
+    sleep 2
+    xdotool mousemove 63 100 click 1
+    sleep 3
+    import -window "$sources_window" "$out/settings-sources.png"
+    xdotool mousemove 784 869 click 1
+    sleep 5
+    expect_config codex claude antigravity
+    expect_sources "claude oauth" "codex api"
+fi
+kill "$sources_pid" 2>/dev/null || true
+wait "$sources_pid" 2>/dev/null || true
+rm -f "$CODEXBAR_MOCK_STATE.sources" "$CODEXBAR_MOCK_STATE.calls"
 
 # QML runtime errors from the widget's own files fail the test, and so does
 # an applet or containment that could not be loaded at all.

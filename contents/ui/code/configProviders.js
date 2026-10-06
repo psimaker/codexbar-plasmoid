@@ -89,6 +89,52 @@ function changes(list, wanted) {
     return out
 }
 
+// Data sources the widget offers besides "auto" (ProviderSources.SOURCES).
+// A stored source it does not know stays until another one is picked.
+var SETTABLE_SOURCES = ["web", "cli", "oauth", "api"]
+
+// The sources config.json stores, as { id: source } without "auto" and
+// without sources the widget does not know: what the settings page mirrors
+// once config.json holds the sources (CodexBar 0.72.1).
+function storedSources(list) {
+    var out = {}
+    for (var i = 0; i < (list || []).length; i++) {
+        if (SETTABLE_SOURCES.indexOf(list[i].source) >= 0)
+            out[list[i].id] = list[i].source
+    }
+    return out
+}
+
+// `config set-source` subcommands that make config.json store the wanted
+// sources ({ id: source }, "auto" for a provider left out), in list order.
+function sourceChanges(list, wanted) {
+    var out = []
+    var sources = wanted || {}
+    for (var i = 0; i < (list || []).length; i++) {
+        var entry = list[i]
+        var want = sources[entry.id] || "auto"
+        var known = entry.source === "auto" || SETTABLE_SOURCES.indexOf(entry.source) >= 0
+        if (want === entry.source || (!known && want === "auto"))
+            continue
+        out.push("set-source --provider " + entry.id + " --source " + want)
+    }
+    return out
+}
+
+// The sources config.json stores after the widget's own choices (its
+// --source overrides) move there once: a provider without a stored source
+// takes the widget's, and a stored source wins.
+function migratedSources(list, widgetSources) {
+    var out = storedSources(list)
+    var own = widgetSources || {}
+    for (var i = 0; i < (list || []).length; i++) {
+        var id = list[i].id
+        if (list[i].source === "auto" && own[id] !== undefined)
+            out[id] = own[id]
+    }
+    return out
+}
+
 // The selection a settings page saves when it started from the enabled ids
 // `base`, shows `chosen`, and the settings now hold `current`: providers
 // ticked or unticked on the page change `current`, the others keep their
@@ -136,9 +182,10 @@ function writeError(output) {
 // reads and writes only; the CLI, the app and other widgets write on their own.
 //
 // State: serial counts the writes, writing covers a write and its read-back,
-// queued is { wanted, force } waiting for them, and force remembers that a
-// refresh that waited or was dropped wanted crash-blocked providers probed.
-// Reads carry a token { serial, force, readBack, migration }.
+// queued is { wanted, sources, force } waiting for them, and force remembers
+// that a refresh that waited or was dropped wanted crash-blocked providers
+// probed. Reads carry a token { serial, force, readBack, migration,
+// sourceMigration }.
 
 function syncState() {
     return { serial: 0, writing: false, queued: null, force: false }
@@ -149,29 +196,48 @@ function syncState() {
 function refresh(state, force) {
     if (state.writing)
         return { state: Object.assign({}, state, { force: state.force || force === true }), read: null }
-    return { state: state, read: { serial: state.serial, force: force === true, readBack: false, migration: false } }
+    return {
+        state: state,
+        read: { serial: state.serial, force: force === true, readBack: false, migration: false, sourceMigration: false }
+    }
 }
 
-// Make config.json, last read as `list`, enable exactly `wanted`. Returns
-// { state, write }: write is { steps, force, migration } to run now, or null
-// when nothing has to change or a running write makes it wait.
-function request(state, list, wanted, force, migration) {
+function startWrite(state, steps, force, migration, sourceMigration) {
+    return {
+        state: Object.assign({}, state, { serial: state.serial + 1, writing: true }),
+        write: { steps: steps, force: force === true, migration: migration === true,
+                 sourceMigration: sourceMigration === true }
+    }
+}
+
+// Make config.json, last read as `list`, enable exactly `wanted` and, when
+// `sources` is given, store those sources (as sourceChanges takes them).
+// Returns { state, write }: write is { steps, force, migration,
+// sourceMigration } to run now, or null when nothing has to change or a
+// running write makes it wait.
+function request(state, list, wanted, force, migration, sources) {
     if (state.writing) {
-        var queued = { wanted: (wanted || []).slice(), force: force === true }
+        var queued = {
+            wanted: (wanted || []).slice(),
+            sources: sources ? Object.assign({}, sources) : null,
+            force: force === true
+        }
         return { state: Object.assign({}, state, { queued: queued }), write: null }
     }
     var steps = changes(list, wanted)
+    if (sources)
+        steps = steps.concat(sourceChanges(list, sources))
     if (steps.length === 0)
         return { state: state, write: null }
-    return {
-        state: Object.assign({}, state, { serial: state.serial + 1, writing: true }),
-        write: { steps: steps, force: force === true, migration: migration === true }
-    }
+    return startWrite(state, steps, force, migration, false)
 }
 
 // The token for the read-back after `write`, whether it worked or not.
 function readBack(state, write) {
-    return { serial: state.serial, force: write.force, readBack: true, migration: write.migration }
+    return {
+        serial: state.serial, force: write.force, readBack: true, migration: write.migration,
+        sourceMigration: write.sourceMigration === true
+    }
 }
 
 // A failed migration write leaves config mode for the session: the write is
@@ -191,13 +257,16 @@ function restart(state) {
 
 // A read finished with `list`, or null when config.json could not be read.
 // `migrated` says whether the widget's own list was moved to config.json
-// (#25), `widgetIds` is that list. Returns { state, action }, by action.type:
+// (#25), `widgetIds` is that list. `widgetSources` is the widget's own
+// { id: source } while they still have to move to config.json (CLI 0.72.1
+// or newer), else null. Returns { state, action }, by action.type:
 //   drop   a write started after this read did, so it may be outdated
 //   leave  unreadable: keep the widget's own list and probe (action.force)
 //   write  run action.steps (a write as from request) before showing anything
 //   show   mirror the list and probe (action.force)
-// action.migrated on write and show says the migration is done now.
-function read(state, token, list, migrated, widgetIds) {
+// action.migrated on write and show says the list migration is done now,
+// action.sourcesMigrated on show the same for the sources.
+function read(state, token, list, migrated, widgetIds, widgetSources) {
     if (!token.readBack && (state.writing || token.serial !== state.serial))
         return { state: Object.assign({}, state, { force: state.force || token.force }), action: { type: "drop" } }
     var force = token.force || state.force
@@ -213,12 +282,24 @@ function read(state, token, list, migrated, widgetIds) {
         if (move.write)
             return { state: move.state, action: Object.assign({ type: "write", migrated: false }, move.write) }
     }
+    var moveSources = widgetSources !== null && widgetSources !== undefined
+    if (moveSources && !token.sourceMigration) {
+        // Once, the widget's sources go to providers without a stored one.
+        var steps = sourceChanges(list, migratedSources(list, widgetSources))
+        if (steps.length > 0) {
+            var sourceMove = startWrite(next, steps, force, false, true)
+            return {
+                state: sourceMove.state,
+                action: Object.assign({ type: "write", migrated: !migrated }, sourceMove.write)
+            }
+        }
+    }
     if (next.queued !== null) {
         var queued = next.queued
         next.queued = null
-        var apply = request(next, list, queued.wanted, queued.force || force, false)
+        var apply = request(next, list, queued.wanted, queued.force || force, false, queued.sources)
         if (apply.write)
             return { state: apply.state, action: Object.assign({ type: "write", migrated: !migrated }, apply.write) }
     }
-    return { state: next, action: { type: "show", force: force, migrated: !migrated } }
+    return { state: next, action: { type: "show", force: force, migrated: !migrated, sourcesMigrated: moveSources } }
 }

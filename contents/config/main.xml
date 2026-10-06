@@ -20,6 +20,12 @@
         <entry name="configWriteError" type="String">
             <default></default>
         </entry>
+        <entry name="configSourcesMigrated" type="Bool">
+            <default>false</default>
+        </entry>
+        <entry name="configStoresSources" type="Bool">
+            <default>false</default>
+        </entry>
         <entry name="showPercentInPanel" type="Bool">
             <default>false</default>
         </entry>

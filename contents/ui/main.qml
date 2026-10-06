@@ -44,6 +44,9 @@ PlasmoidItem {
     property bool mirroringConfig: false
     // A failed one-time migration keeps this session on the widget's own list.
     property bool configMigrationFailed: false
+    // A failed one-time move of the widget's sources keeps this session on
+    // its --source overrides.
+    property bool sourceMigrationFailed: false
 
     // ---- data model ----
     // providerId -> { entry, entries, cost, costUpdatedAt, error, loading, fetchedAt }
@@ -429,8 +432,28 @@ PlasmoidItem {
         probeAll(force)
     }
 
+    // config.json holds the providers' data sources: the CLI can store them
+    // (0.72.1 or newer) and the widget's own sources moved there. Then the
+    // Providers page writes them with `config set-source`, and probes pass no
+    // --source.
+    function storesSources() {
+        return configMode && CliStatus.supportsConfigSetSource(cliState.detectedVersion)
+            && Plasmoid.configuration.configSourcesMigrated
+    }
+
+    // The widget's own sources while they still have to move to config.json
+    // (ConfigProviders.read), else null.
+    function sourcesToMove() {
+        if (!CliStatus.supportsConfigSetSource(cliState.detectedVersion)
+                || Plasmoid.configuration.configSourcesMigrated || sourceMigrationFailed)
+            return null
+        return ProviderSources.parse(Plasmoid.configuration.providerSources)
+    }
+
     // Back to the widget's own provider list; true when that changed it.
     function leaveConfigMode() {
+        if (Plasmoid.configuration.configStoresSources)
+            Plasmoid.configuration.configStoresSources = false
         if (Plasmoid.configuration.configProviders !== "")
             Plasmoid.configuration.configProviders = ""
         if (configProviderList === null)
@@ -461,9 +484,11 @@ PlasmoidItem {
         executable.connectSource(command)
     }
 
-    // A selection applied on the settings page goes to config.json.
+    // A selection applied on the settings page goes to config.json, with its
+    // sources once config.json holds them.
     function applyProviderSelection(wanted) {
-        var request = ConfigProviders.request(configSync, configProviderList, wanted, true, false)
+        var sources = storesSources() ? ProviderSources.parse(Plasmoid.configuration.providerSources) : null
+        var request = ConfigProviders.request(configSync, configProviderList, wanted, true, false, sources)
         configSync = request.state
         if (request.write)
             writeConfig(request.write)
@@ -484,15 +509,24 @@ PlasmoidItem {
     }
 
     // The settings page shows config.json's state: enabledProviders mirrors
-    // it, and configProviders caches the full list with names and sources.
+    // it, so does providerSources once config.json holds the sources, and
+    // configProviders caches the full list with names and sources.
     function mirrorConfig(list) {
         var enabled = ConfigProviders.enabledIds(list).join(",")
         var cache = JSON.stringify(list)
+        var stores = storesSources()
         mirroringConfig = true
         if (Plasmoid.configuration.enabledProviders !== enabled)
             Plasmoid.configuration.enabledProviders = enabled
+        if (stores) {
+            var sources = ProviderSources.serialize(ConfigProviders.storedSources(list))
+            if (Plasmoid.configuration.providerSources !== sources)
+                Plasmoid.configuration.providerSources = sources
+        }
         if (Plasmoid.configuration.configProviders !== cache)
             Plasmoid.configuration.configProviders = cache
+        if (Plasmoid.configuration.configStoresSources !== stores)
+            Plasmoid.configuration.configStoresSources = stores
         mirroringConfig = false
     }
 
@@ -582,7 +616,7 @@ PlasmoidItem {
 
         var cliGeneration = cliState.generation
         var command = cliCmd("usage --provider " + p + " --json"
-                             + ProviderSources.cliArguments(Plasmoid.configuration.providerSources, p)
+                             + (storesSources() ? "" : ProviderSources.cliArguments(Plasmoid.configuration.providerSources, p))
                              + (Plasmoid.configuration.showStatus ? " --status" : ""))
         // While a probe of p runs, this refresh shares its answer, or runs
         // once it is done when it needs a newer one.
@@ -656,7 +690,8 @@ PlasmoidItem {
             var list = ConfigProviders.parse(parts[0], parts.length > 1 ? parts[1] : "",
                                              Catalog.cliProviderId)
             var read = ConfigProviders.read(configSync, configReq.token, list,
-                                            Plasmoid.configuration.configMigrated, keyProviderIds())
+                                            Plasmoid.configuration.configMigrated, keyProviderIds(),
+                                            sourcesToMove())
             configSync = read.state
             var action = read.action
             if (action.type === "drop")
@@ -673,6 +708,8 @@ PlasmoidItem {
             configProviderList = list
             if (action.migrated)
                 Plasmoid.configuration.configMigrated = true
+            if (action.sourcesMigrated)
+                Plasmoid.configuration.configSourcesMigrated = true
             if (action.type === "write") {
                 writeConfig(action)
                 return
@@ -702,8 +739,14 @@ PlasmoidItem {
                     probeAll(abandoned.force)
                 return
             }
-            if (writeError !== "")
+            if (writeError !== "" && writeReq.write.sourceMigration) {
+                // Keep the widget's sources as --source for this session;
+                // the read-back shows what config.json has now.
+                console.warn("codexbar: moving the provider sources to config.json failed:", writeError)
+                sourceMigrationFailed = true
+            } else if (writeError !== "") {
                 console.warn("codexbar: config write failed:", writeError)
+            }
             loadConfig(ConfigProviders.readBack(configSync, writeReq.write))
             return
         }
@@ -1013,7 +1056,14 @@ PlasmoidItem {
     Connections {
         target: Plasmoid.configuration
         function onProviderSourcesChanged() {
-            if (root.componentReady)
+            // Copying config.json's sources back into the key changes nothing.
+            if (!root.componentReady || root.mirroringConfig)
+                return
+            // A source chosen on the settings page goes to config.json once
+            // it holds the sources; until then it is the probes' --source.
+            if (root.storesSources())
+                root.applyProviderSelection(root.keyProviderIds())
+            else
                 root.refreshAll(true)
         }
         function onEnabledProvidersChanged() {

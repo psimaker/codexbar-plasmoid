@@ -64,3 +64,22 @@ function cliArguments(raw, id) {
     var source = sourceFor(raw, id)
     return source === DEFAULT_SOURCE ? "" : " --source " + source
 }
+
+// The sources a settings page saves when it started from `base`, shows
+// `chosen`, and the settings now hold `current` (all raw strings): a source
+// changed on the page keeps the page's choice, the others take current's.
+function rebase(base, chosen, current) {
+    var from = parse(base)
+    var mine = parse(chosen)
+    var now = parse(current)
+    var ids = Object.keys(from).concat(Object.keys(mine), Object.keys(now))
+    var out = {}
+    for (var i = 0; i < ids.length; i++) {
+        var id = ids[i]
+        var changed = (mine[id] || DEFAULT_SOURCE) !== (from[id] || DEFAULT_SOURCE)
+        var source = changed ? mine[id] : now[id]
+        if (source !== undefined)
+            out[id] = source
+    }
+    return serialize(out)
+}
