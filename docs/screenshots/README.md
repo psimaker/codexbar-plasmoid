@@ -3,8 +3,7 @@
 The README uses just two visual blocks: an overview that follows GitHub's
 `prefers-color-scheme` setting, and a compact comparison of panel modes.
 Detailed controls belong here, where readers can open them at full resolution.
-All seven files below are also candidates for maintainer review for the KDE
-Store. The [review of the first renders](review.md) explains the revisions.
+All seven images also serve the KDE Store listing.
 
 ## Art direction
 
@@ -26,11 +25,11 @@ below give each row the spacing of a normal 44 px panel.
 
 | File | Native PNG size | Placement and purpose |
 |---|---|---|
-| `overview.png` | Expected 744 × 816 | Dark README hero and Store overview: three providers with session/weekly bars. Replaces `codexbar-plasma.png`. |
+| `overview.png` | Expected 744 × 816 | Dark README hero and Store overview: three providers with session/weekly bars. |
 | `overview-light.png` | Expected 744 × 816 | Light README hero and Store light-theme view, with identical data and layout. |
 | `provider-codex.png` | Expected 744 × ≈1296 | Gallery/Store only: session, weekly and Spark windows, resets, pace, costs, operational status and Pro plan. No account line. |
-| `panel-modes.png` | Widest strip + 64 px × 512 | README and Store: merged meter, per-provider critters, logos with percentages/countdowns. Three native captures with captions outside the UI. Replaces both old logo examples with one comparison. |
-| `settings-general.png` | 1920 × 2304 | Gallery/Store only: complete General page, including Notifications at their defaults and the custom CLI path field with its built-in placeholder. Replaces `panel-display-mode-settings.png`. |
+| `panel-modes.png` | Widest strip + 64 px × 512 | README and Store: merged meter, per-provider critters, logos with percentages/countdowns. Three native captures with captions outside the UI. |
+| `settings-general.png` | 1920 × 2304 | Gallery/Store only: complete General page, including Notifications at their defaults and the custom CLI path field with its built-in placeholder. |
 | `settings-providers.png` | 1920 × 800 | Gallery/Store only: enabled providers, shared config.json and the current release's `Config: Auto` / `Config: OAuth` choices. |
 | `cli-setup-light.png` | Card bounds + 64 px per dimension | Gallery/Store only: the real CLI setup card with **Install CodexBar CLI**, under Breeze Light. The CLI is intentionally unavailable; no installation is performed. |
 
@@ -95,29 +94,19 @@ outside the icon/label bounds. Their measurements are saved as `*.pixels.json`.
 QML errors use the smoke test's patterns, scoped to the disposable widget
 package; applet/containment load failures are also fatal. Upstream warnings and
 the expected `cfg_configWriteError` / `cfg_configWriteErrorDefault` initial-property
-warnings remain in the logs. The container
-safe-directory, forced stderr logging and ImageMagick 7 AE parsing fixes are
-retained. The smoke test itself is unchanged by this revision.
+warnings remain in the logs.
 Capture groups run in separate shells: one failed group still fails CI, while
 the other groups continue and contribute candidates and diagnostics to the
 same artifact. A failed run can therefore include a partial contact sheet.
 
-Send back the **whole `codexbar-screenshots-<commit SHA>` artifact**, containing:
+The workflow uploads the artifact `codexbar-screenshots-<commit SHA>`:
 
-- `images/overview.png`, `images/overview-light.png`, `images/provider-codex.png`,
-  `images/panel-modes.png`, `images/settings-general.png`,
-  `images/settings-providers.png`, and `images/cli-setup-light.png`.
-- `contact-sheet.png`, `manifest.txt`, and `diagnostics/` (state JSON, native
-  windows/content, individual panel strips, pixel checks, mock CLI calls,
-  logs and package versions; on
-  failure, the screen and window tree too).
+- `images/` with the seven PNGs above;
+- `contact-sheet.png` and `manifest.txt` (sizes and hashes);
+- `diagnostics/`: state JSON, native windows and content, the individual panel
+  strips, pixel checks, mock CLI calls, logs and package versions; on failure,
+  the screen and window tree too.
 
-These revisions still need a CI render and visual approval. After review,
-copy the seven approved PNGs from `images/` here before merging; the main README
-and gallery references are staged for those files. Arch is rolling, so exact
-pixels across package upgrades are not guaranteed. Installed versions are
-recorded with the artifact.
-
-After maintainer approval, remove the four obsolete images, kept until then:
-`codexbar-plasma.png`, `panel-display-mode-settings.png`,
-`provider-logos-horizontal.png`, and `provider-logos-vertical.png`.
+To update the set, review the images and copy them from `images/` into this
+directory. Arch is rolling, so exact pixels across package upgrades are not
+guaranteed; the artifact records the installed versions.
