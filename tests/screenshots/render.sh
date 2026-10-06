@@ -351,7 +351,9 @@ panel_views() {
         mv "$out/images/$name.png" "$out/diagnostics/"
     done
     panel_background="$(magick "$out/diagnostics/meters-merged.content.png" -format '%[pixel:p{0,0}]' info:)"
-    magick -size "$((panel_width + 64))x512" "xc:$panel_background" \
+    # The merged meter's capture has no color, so its corner pixel would make
+    # a grayscale canvas; keep the canvas in sRGB for the colored logos.
+    magick -size "$((panel_width + 64))x512" "xc:$panel_background" -colorspace sRGB \
         "$out/diagnostics/meters-merged.content.png" -geometry +32+84 -composite \
         "$out/diagnostics/meters-separate.content.png" -geometry +32+244 -composite \
         "$out/diagnostics/logos-horizontal.content.png" -geometry +32+404 -composite \
@@ -359,6 +361,8 @@ panel_views() {
         -annotate +32+32 'Merged meter (three providers)' -annotate +32+192 'Per-provider meters' \
         -annotate +32+352 'Provider logos with reset countdowns' \
         -strip "$out/images/panel-modes.png"
+    [[ "$(magick "$out/images/panel-modes.png" -format '%[colorspace]' info:)" == sRGB ]] \
+        || { echo "panel-modes.png lost its colors" >&2; exit 1; }
 }
 
 for scene in popup_views panel_views light_overview cli_setup; do
