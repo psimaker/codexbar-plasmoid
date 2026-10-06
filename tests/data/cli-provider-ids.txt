@@ -1,7 +1,7 @@
 # Provider identifiers accepted by `codexbar usage --provider`, in the order
-# printed by `codexbar usage --help` of CodexBar CLI 0.71.0. Regenerate with:
-#   codexbar usage --help | grep -o -- '--provider [^]]*' | tr '|' '\n'
-# (drop the trailing "both" and "all" selectors).
+# printed by `codexbar usage --help` of CodexBar CLI 0.72.0. Regenerate with:
+#   codexbar usage --help | grep -o -- '--provider [^]]*' | head -n 1 \
+#     | sed 's/^--provider //' | tr '|' '\n' | grep -v -x -e both -e all
 codex
 openai
 azure-openai
@@ -91,3 +91,4 @@ llmman
 xkiro
 museai
 lithosai
+workbuddy
