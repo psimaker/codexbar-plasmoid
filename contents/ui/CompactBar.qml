@@ -177,7 +177,7 @@ MouseArea {
             if (pid === "__merged__")
                 plasmoidRoot.manualRefresh()
             else
-                plasmoidRoot.refreshProvider(pid)
+                plasmoidRoot.refreshProvider(pid, true)
         } else if (action === "dashboard" || action === "status") {
             var provider = pid === "__merged__" ? mergedClickProvider() : pid
             var url = provider !== "" ? Catalog.meta(provider)[action] : ""

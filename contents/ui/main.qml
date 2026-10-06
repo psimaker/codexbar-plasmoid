@@ -9,6 +9,7 @@ import "code/claudeAccounts.js" as ClaudeAccounts
 import "code/cliStatus.js" as CliStatus
 import "code/configProviders.js" as ConfigProviders
 import "code/providerSources.js" as ProviderSources
+import "code/usageProbes.js" as UsageProbes
 
 PlasmoidItem {
     id: root
@@ -87,6 +88,8 @@ PlasmoidItem {
     // per-provider request generation: responses from an older generation
     // (e.g. after a config change re-triggered a refresh) are discarded
     property var requestGen: ({})
+    // One usage probe per provider at a time (UsageProbes).
+    property var probes: UsageProbes.initialState()
 
     // Optional schema-v1 claude-swap-compatible adapter state. Normal Claude
     // usage/cost queries remain active for the panel, overview and fallback UI.
@@ -494,7 +497,7 @@ PlasmoidItem {
             for (var i = 0; i < enabledProviders.length; i++) {
                 var provider = enabledProviders[i]
                 if (force === true || !autoRefreshBlocked[provider])
-                    refreshProvider(provider)
+                    refreshProvider(provider, force === true)
             }
         }
         // The account adapter is a separate executable from the codexbar CLI,
@@ -563,22 +566,29 @@ PlasmoidItem {
         }
     }
 
-    function refreshProvider(p) {
+    // fresh: the answer must be fetched after this call (a forced refresh),
+    // so a probe that already runs does not count for it.
+    function refreshProvider(p, fresh) {
         if (!CliStatus.canRunUsage(cliState.code))
             return
         if (!usageData[p])
             usageData[p] = {}
-        var gen = (requestGen[p] || 0) + 1
-        requestGen[p] = gen
         usageData[p].loading = true
         bump()
 
         var cliGeneration = cliState.generation
-        var cmd = uniqueCliCommand(
-            cliCmd("usage --provider " + p + " --json"
-                   + ProviderSources.cliArguments(Plasmoid.configuration.providerSources, p)
-                   + (Plasmoid.configuration.showStatus ? " --status" : "")),
-            "usage-" + p, cliGeneration)
+        var command = cliCmd("usage --provider " + p + " --json"
+                             + ProviderSources.cliArguments(Plasmoid.configuration.providerSources, p)
+                             + (Plasmoid.configuration.showStatus ? " --status" : ""))
+        // While a probe of p runs, this refresh shares its answer, or runs
+        // once it is done when it needs a newer one.
+        var probe = UsageProbes.request(probes, p, command, cliGeneration, fresh === true)
+        probes = probe.state
+        if (!probe.start)
+            return
+        var gen = (requestGen[p] || 0) + 1
+        requestGen[p] = gen
+        var cmd = uniqueCliCommand(command, "usage-" + p, cliGeneration)
         pendingUsage[cmd] = { p: p, gen: gen, cliGeneration: cliGeneration }
         executable.connectSource(cmd)
     }
@@ -748,7 +758,7 @@ PlasmoidItem {
             // Switching affects both the adapter projection and the ambient
             // Claude snapshot used by panel/overview/status/cost UI.
             if (enabledProviders.indexOf("claude") >= 0)
-                refreshProvider("claude")
+                refreshProvider("claude", true)
             refreshClaudeAccounts()
             return
         }
@@ -756,7 +766,18 @@ PlasmoidItem {
         var req = pendingUsage[source]
         if (req !== undefined) {
             delete pendingUsage[source]
-            if (requestGen[req.p] !== req.gen
+            var probe = UsageProbes.finish(probes, req.p, req.cliGeneration)
+            probes = probe.state
+            if (probe.rerun) {
+                // A refresh with another command waited for this probe; it
+                // shows loading again only if it can run.
+                if (usageData[req.p])
+                    usageData[req.p].loading = false
+                refreshProvider(req.p, true)
+                bump()
+                return
+            }
+            if (!probe.accept || requestGen[req.p] !== req.gen
                     || req.cliGeneration !== cliState.generation)
                 return // stale response from an older refresh
             var d = usageData[req.p]
