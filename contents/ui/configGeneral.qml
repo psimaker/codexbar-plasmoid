@@ -19,6 +19,9 @@ KCM.SimpleKCM {
     property alias cfg_launchCommand: launchCommand.text
     property alias cfg_showCost: showCost.checked
     property alias cfg_showStatus: showStatus.checked
+    property alias cfg_notifyQuota: notifyQuota.checked
+    property alias cfg_notifyThreshold: notifyThreshold.value
+    property alias cfg_notifyStatus: notifyStatus.checked
     property alias cfg_cliPath: cliPath.text
     property alias cfg_cliEnvironmentFile: cliEnvironmentFile.text
     property alias cfg_enableClaudeAccounts: enableClaudeAccounts.checked
@@ -202,6 +205,49 @@ KCM.SimpleKCM {
         QQC2.CheckBox {
             id: showStatus
             text: i18n("Show provider status")
+        }
+
+        Item { Kirigami.FormData.isSection: true }
+
+        QQC2.CheckBox {
+            id: notifyQuota
+            Kirigami.FormData.label: i18n("Notifications:")
+            text: i18n("When a quota runs low or resets")
+        }
+
+        RowLayout {
+            enabled: notifyQuota.checked
+            spacing: Kirigami.Units.smallSpacing
+
+            QQC2.Label {
+                text: i18n("Low below")
+            }
+
+            QQC2.SpinBox {
+                id: notifyThreshold
+                from: 1
+                to: 99
+                Accessible.name: i18n("Low quota threshold in percent left")
+            }
+
+            QQC2.Label {
+                text: i18n("% left")
+            }
+        }
+
+        QQC2.CheckBox {
+            id: notifyStatus
+            text: i18n("When a provider's status changes")
+            enabled: showStatus.checked
+        }
+
+        QQC2.Label {
+            Layout.fillWidth: true
+            Layout.maximumWidth: page.hintWidth
+            text: i18n("Only changes seen while the widget runs are announced, never what it finds on start. Status changes need \"Show provider status\".")
+            wrapMode: Text.WordWrap
+            opacity: 0.7
+            font: Kirigami.Theme.smallFont
         }
 
         Item { Kirigami.FormData.isSection: true }

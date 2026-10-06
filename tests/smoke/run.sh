@@ -184,7 +184,7 @@ wait "$about_pid" 2>/dev/null || true
 # The settings window: the General and Providers pages, and the override
 # dialog of Claude, whose seeded override gives it a ticked row.
 rm -f "$CODEXBAR_MOCK_STATE"
-plasmoidviewer -a "$(package settings "$three" \
+plasmoidviewer -a "$(package settings "$three" notifyQuota=true notifyStatus=true \
     'providerOverrides={"claude":{"panelDisplayMode":"logos"}}')" -s 560x860 -f planar \
     >"$out/settings.log" 2>&1 &
 settings_pid=$!

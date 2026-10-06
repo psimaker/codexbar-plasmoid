@@ -46,6 +46,7 @@ Options: `--widget-only`, `--cli-only`, `--version v0.6.1`. The scripts are plai
 - **Panel icon in the original look.** Two meter capsules (session on top, weekly below), fill = remaining quota, dimmed when data is stale. One merged icon showing the worst case across providers by default, or one icon per provider with the original "critter" faces for Codex and Claude. Optional percentage label, optionally with the time until that window resets (`40% · 3h 50m`), or provider logos instead of meters. **Usage bars fill** in the General settings switches every meter and bar between remaining quota (default, as in CodexBar) and used quota. Per-provider overrides let single providers look different from the rest.
 - **Popup like the original menu.** Provider switcher tabs with brand-colored quota bars, an overview page, and per provider: session / weekly / extra rate windows ("Codex Spark", model-scoped weekly caps, …) with progress bars, reset countdowns and a pace line, Codex reset credits, local cost (today / last 30 days via `codexbar cost`), provider status, account info, and the CLI's detail rows (balances, monthly spend, credit pools, …).
 - **Actions.** Refresh, cost-history refresh, Usage Dashboard, Status Page, Settings, About. A middle or double click on a panel icon can refresh, open the usage dashboard or status page, or run a command such as `konsole -e codex`, globally or per provider.
+- **Notifications, opt-in.** A Plasma notification when a quota drops below a threshold (10 % left by default) or is reset, and optionally when a provider's status changes. Like upstream's Linux app, only changes seen while the widget runs count, never what it finds on start.
 - **90 providers.** Everything the CodexBar CLI supports, enable only what you use.
 - **Optional Claude multi-account view.** Stacked 5-hour and 7-day cards per account with explicit switching through a schema-v1 [`claude-swap`](https://github.com/realiti4/claude-swap) adapter.
 
@@ -211,7 +212,7 @@ The CodexBar CLI remains required: normal Claude usage continues to power the pa
 <summary><b>Not ported (macOS-only upstream features)</b></summary>
 <br>
 
-Menu bar animations (blink/wiggle), WidgetKit widgets, notifications, cost-history and detail-section charts, and the "Add Account" flow. Logins are handled by the provider CLIs themselves.
+Menu bar animations (blink/wiggle), WidgetKit widgets, cost-history and detail-section charts, and the "Add Account" flow. Logins are handled by the provider CLIs themselves.
 </details>
 
 ## 🙏 Credits & license

@@ -573,6 +573,39 @@ function slotTitle(providerId, slot, windowMinutes) {
     return windowTitle(windowMinutes, fallback)
 }
 
+// The windows notifications watch, as the card lists them: [{ key, label,
+// remaining, resetsAt }] for every window with a known reading.
+function notificationWindows(usage, providerId) {
+    var out = []
+    if (!usage)
+        return out
+    var slots = cardSlots(usage, providerId)
+    for (var i = 0; i < slots.length; i++) {
+        var w = usableWindow(usage[slots[i]])
+        if (!windowUsageKnown(w))
+            continue
+        out.push({
+            key: slots[i],
+            label: slotTitle(providerId, slots[i], effectiveWindowMinutes(w, providerId, slots[i])),
+            remaining: 100 - normalizedPercent(w.usedPercent),
+            resetsAt: typeof w.resetsAt === "string" ? w.resetsAt : ""
+        })
+    }
+    var extras = usage.extraRateWindows || []
+    for (var j = 0; j < extras.length; j++) {
+        var ew = namedWindow(extras[j])
+        if (!windowUsageKnown(ew))
+            continue
+        out.push({
+            key: "extra:" + (extras[j].id || extras[j].title || j),
+            label: extras[j].title || "Extra",
+            remaining: 100 - normalizedPercent(ew.usedPercent),
+            resetsAt: typeof ew.resetsAt === "string" ? ew.resetsAt : ""
+        })
+    }
+    return out
+}
+
 // Plan text like the original card's top-right label
 function planText(entry) {
     if (!entry || !entry.usage) return ""
