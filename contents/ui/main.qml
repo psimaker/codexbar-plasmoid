@@ -961,7 +961,9 @@ PlasmoidItem {
             currentTab = defaultTab()
         deferAutomaticCostScans()
         // In config mode every read of config.json is followed by probes.
-        if (!configMode)
+        // Before the component is ready the CLI check is still to come, and
+        // it refreshes everything once it knows the CLI.
+        if (componentReady && !configMode)
             refreshAll(true)
     }
 

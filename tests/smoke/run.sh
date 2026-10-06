@@ -74,7 +74,7 @@ shoot() {
 render() {
     local name="$1" pkg="$2" size="$3"
     shift 3
-    rm -f "$CODEXBAR_MOCK_STATE"
+    rm -f "$CODEXBAR_MOCK_STATE" "$CODEXBAR_MOCK_STATE.calls"
     if [[ -n "${config_state:-}" ]]; then
         tr ' ' '\n' <<<"$config_state" >"$CODEXBAR_MOCK_STATE"
     fi
@@ -90,6 +90,12 @@ three="enabledProviders=codex,claude,antigravity"
 panel=(-c org.kde.panel -f horizontal -l topedge)
 render panel-meters "$(package meters "$three" showPercentInPanel=true panelPercentSource=lowest)" \
     640x140 "${panel[@]}"
+# Nothing is probed before the CLI check, whose answer would be dropped.
+cp "$CODEXBAR_MOCK_STATE.calls" "$out/panel-meters.calls.txt"
+if [[ "$(head -n 1 "$CODEXBAR_MOCK_STATE.calls" | cut -d ' ' -f 2-)" != "--version" ]]; then
+    echo "The widget called the CLI before checking it: $(head -n 1 "$CODEXBAR_MOCK_STATE.calls")" >&2
+    failed=1
+fi
 # The widget's own list moved to config.json on first start (#25).
 expect_config codex claude antigravity
 render panel-logos "$(package logos "$three" panelDisplayMode=logos showPercentInPanel=true)" \
