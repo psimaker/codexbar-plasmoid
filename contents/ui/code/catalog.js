@@ -335,8 +335,11 @@ function antigravityWindowFor(usage, wantedMinutes) {
     return best
 }
 
+// Usage is known when a window reports a finite usedPercent and does not
+// say otherwise; null, NaN or a string are no reading.
 function windowUsageKnown(w) {
-    return w && w.usageKnown !== false && w.usedPercent !== undefined
+    return !!w && w.usageKnown !== false && typeof w.usedPercent === "number"
+        && isFinite(w.usedPercent)
 }
 
 // Time until the reset of the window behind a panel percentage ("3h 50m"),
@@ -354,10 +357,14 @@ function remainingPick(w) {
     return windowUsageKnown(w) ? { window: w, remaining: 100 - normalizedPercent(w.usedPercent) } : null
 }
 
+function isMonthly(minutes) {
+    return minutes >= 40000 && minutes <= 46000
+}
+
 // The window behind a panel percentage and its remaining percent, or null.
 // source is "session" or "weekly" (each falls back to the other) or "lowest",
-// which also weighs usable extra windows such as model-scoped weekly limits,
-// since any of them can run out first.
+// which also weighs monthly windows and usable extra windows such as
+// model-scoped weekly limits, since any of them can run out first.
 function panelWindow(usage, providerId, source) {
     if (!usage)
         return null
@@ -368,6 +375,12 @@ function panelWindow(usage, providerId, source) {
     if (source !== "lowest")
         return session || weekly
     var picks = [session, weekly]
+    var slots = ["primary", "secondary", "tertiary"]
+    for (var s = 0; s < slots.length; s++) {
+        var w = usableWindow(usage[slots[s]])
+        if (w && isMonthly(effectiveWindowMinutes(w, providerId, slots[s])))
+            picks.push(remainingPick(w))
+    }
     var extras = usage.extraRateWindows || []
     for (var i = 0; i < extras.length; i++)
         picks.push(remainingPick(namedWindow(extras[i])))
@@ -455,8 +468,33 @@ function paceLine(pace, win, windowMinutes, nowMs, providerId) {
 function windowTitle(windowMinutes, fallback) {
     if (windowMinutes === 300) return "Session"
     if (windowMinutes === 10080) return "Weekly"
-    if (windowMinutes >= 40000 && windowMinutes <= 46000) return "Monthly"
+    if (isMonthly(windowMinutes)) return "Monthly"
     return fallback
+}
+
+// Whether the merged panel meter is stale. It shows, for each of `sources`,
+// the lowest remaining value of the merged providers, so it is stale when
+// one of those values comes from a stale provider, and without any value
+// when every provider is stale. pickOf(provider, source) is the provider's
+// panel pick, staleOf(provider) its staleness.
+function mergedStale(providers, sources, pickOf, staleOf) {
+    var shown = []
+    for (var s = 0; s < sources.length; s++) {
+        var lowest = null
+        var provider = ""
+        for (var i = 0; i < providers.length; i++) {
+            var pick = pickOf(providers[i], sources[s])
+            if (pick && (lowest === null || pick.remaining < lowest.remaining)) {
+                lowest = pick
+                provider = providers[i]
+            }
+        }
+        if (provider !== "" && shown.indexOf(provider) < 0)
+            shown.push(provider)
+    }
+    if (shown.length > 0)
+        return shown.some(function (p) { return staleOf(p) })
+    return providers.every(function (p) { return staleOf(p) })
 }
 
 // Rate-window slots the provider card lists. With an Antigravity quota
