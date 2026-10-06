@@ -1,12 +1,13 @@
 # KDE Store publishing checklist
 
-This document prepares a manual KDE Store publication. It does not imply that
-CodexBar is already available in the store. Account sign-in, product creation,
-upload, and publication must be performed by the maintainer.
+CodexBar is listed in the KDE Store as
+[CodexBar for KDE Plasma 6](https://store.kde.org/p/2377011) (product 2377011),
+published on 2026-10-03 with 0.6.1. This checklist covers its updates. Account
+sign-in, uploads, and publication must be performed by the maintainer.
 
 ## Listing data
 
-- Category: **Plasma 6 Extensions → Plasma 6 Applets**
+- Category: **Plasma 6 Extensions → Plasma 6 Monitoring**
 - Product title: **CodexBar for KDE Plasma 6**
 - Plugin ID: `com.github.psimaker.codexbar`
 - License: **MIT**
