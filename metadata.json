@@ -14,7 +14,7 @@
         "Id": "com.github.psimaker.codexbar",
         "License": "MIT",
         "Name": "CodexBar",
-        "Version": "0.6.1",
+        "Version": "0.7.0",
         "Website": "https://github.com/psimaker/codexbar-plasmoid"
     },
     "X-Plasma-API-Minimum-Version": "6.0"
