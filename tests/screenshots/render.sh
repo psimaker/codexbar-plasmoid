@@ -175,7 +175,8 @@ changed() {
     # actual pixels too; hover has already been cleared before both frames.
     local difference
     difference="$(magick compare -metric AE "$work/before.png" "$work/after.png" null: 2>&1 || true)"
-    python3 -c 'import sys; assert float(sys.argv[1]) > 100, "Click changed fewer than 100 pixels"' "$difference"
+    # ImageMagick 7.1.2 prints the count with its share: "131557 (0.0964)".
+    python3 -c 'import sys; assert float(sys.argv[1].split()[0]) > 100, "Click changed fewer than 100 pixels"' "$difference"
 }
 
 stop() {
