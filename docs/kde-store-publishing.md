@@ -1,14 +1,15 @@
 # KDE Store publishing checklist
 
 CodexBar is listed in the KDE Store as
-[CodexBar for KDE Plasma 6](https://store.kde.org/p/2377011) (product 2377011),
-published on 2026-10-03 with 0.6.1. This checklist covers its updates. Account
-sign-in, uploads, and publication must be performed by the maintainer.
+[CodexBar for KDE Plasma](https://store.kde.org/p/2377011) (product 2377011),
+published on 2026-10-03 with 0.6.1 and renamed from "CodexBar for KDE Plasma 6"
+with 0.7.1. This checklist covers its updates. Account sign-in, uploads, and
+publication must be performed by the maintainer.
 
 ## Listing data
 
 - Category: **Plasma 6 Extensions → Plasma 6 Monitoring**
-- Product title: **CodexBar for KDE Plasma 6**
+- Product title: **CodexBar for KDE Plasma**
 - Plugin ID: `com.github.psimaker.codexbar`
 - License: **MIT**
 - Source URL: <https://github.com/psimaker/codexbar-plasmoid>
@@ -117,7 +118,7 @@ desktop profile when an isolated Plasma 6 test profile is available.
 
 ### Full product description
 
-> CodexBar for KDE Plasma 6 keeps AI coding-provider usage limits visible in
+> CodexBar for KDE Plasma keeps AI coding-provider usage limits visible in
 > your panel. Its compact representation can show merged or per-provider quota
 > meters, provider logos, and an optional percentage. The popup provides an
 > overview plus detailed session, weekly, and additional rate-limit windows,
@@ -129,7 +130,7 @@ desktop profile when an isolated Plasma 6 test profile is available.
 > modes, a custom CLI path, and an optional schema-v1 Claude multi-account
 > adapter. Theme colors are used throughout for Plasma light and dark themes.
 >
-> CodexBar for KDE Plasma 6 is an independent community port. The widget does
+> CodexBar for KDE Plasma is an independent community port. The widget does
 > not contain provider credentials. It can install or update the CodexBar CLI
 > for the current user, but only when you click “Install CodexBar CLI” or
 > “Update CodexBar CLI” in the widget: it then downloads the official CLI
