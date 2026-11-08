@@ -10,7 +10,7 @@ import zipfile
 
 REPOSITORY = pathlib.Path(__file__).resolve().parents[1]
 PLUGIN_ID = "com.github.psimaker.codexbar"
-VERSION = "0.7.0"
+VERSION = "0.7.1"
 ARTIFACT_NAME = f"{PLUGIN_ID}-{VERSION}.plasmoid"
 
 
@@ -127,16 +127,16 @@ class PackagingTests(unittest.TestCase):
         mismatch = self.run_command(
             "python3",
             "scripts/validate-release-version.py",
-            "v0.7.1",
+            "v0.7.2",
             check=False,
         )
         self.assertNotEqual(mismatch.returncode, 0)
         self.assertIn("does not match release tag", mismatch.stderr)
 
         match = self.run_command(
-            "python3", "scripts/validate-release-version.py", "v0.7.0"
+            "python3", "scripts/validate-release-version.py", "v0.7.1"
         )
-        self.assertIn("matches metadata version 0.7.0", match.stdout)
+        self.assertIn("matches metadata version 0.7.1", match.stdout)
 
     def test_release_tag_must_be_semver(self):
         result = self.run_command(
