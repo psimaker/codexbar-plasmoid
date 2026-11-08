@@ -5,12 +5,12 @@
   <img src="docs/screenshots/overview-light.png" width="372" alt="CodexBar overview with Codex, Claude and Antigravity session and weekly quotas">
 </picture>
 
-# CodexBar for KDE Plasma 6
+# CodexBar for KDE Plasma
 
 **Your AI coding limits, always visible in the panel.**
 
 A faithful KDE Plasma port of [CodexBar](https://github.com/steipete/CodexBar), Peter Steinberger's macOS menu bar app.
-Codex, Claude, Cursor, Copilot, Gemini and 80+ more providers, driven by the official CodexBar CLI.
+Codex, Claude, Cursor, Copilot, Gemini and 100+ more providers, driven by the official CodexBar CLI.
 
 [![Release](https://img.shields.io/github/v/release/psimaker/codexbar-plasmoid?style=flat-square&color=1d99f3)](https://github.com/psimaker/codexbar-plasmoid/releases/latest)
 [![KDE Store](https://img.shields.io/badge/dynamic/xml?url=https%3A%2F%2Fapi.kde-look.org%2Focs%2Fv1%2Fcontent%2Fdata%2F2377011&query=%2F%2Fcontent%2Fversion&label=KDE%20Store&style=flat-square&color=1d99f3&logo=kde&logoColor=white)](https://store.kde.org/p/2377011)
