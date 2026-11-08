@@ -170,7 +170,9 @@ kill "$clicks_pid" 2>/dev/null || true
 wait "$clicks_pid" 2>/dev/null || true
 
 # "About CodexBar" at the bottom of the popup opens the About page, which
-# shows the version from metadata.json.
+# shows the version from metadata.json. The popup opens on the Codex card, so
+# this click and the "Settings…" clicks below move with that card's height
+# (two rate windows, each with a pace line, in the fixture).
 rm -f "$CODEXBAR_MOCK_STATE"
 plasmoidviewer -a "$(package about "$three")" -s 560x860 -f planar >"$out/popup-about.log" 2>&1 &
 about_pid=$!
@@ -179,11 +181,16 @@ sleep "${SMOKE_WAIT:-15}"
 xdotool mousemove 559 859
 sleep 1
 import -window root "$out/popup-about.before.png"
-xdotool mousemove 72 486 click 1 mousemove 559 859
+xdotool mousemove 72 506 click 1 mousemove 559 859
 sleep 3
 shoot popup-about 560x860
 if magick compare -metric AE "$out/popup-about.before.png" "$out/popup-about.screen.png" null: 2>/dev/null; then
     echo "About CodexBar did not open the About page" >&2
+    failed=1
+fi
+# A click that lands on "Settings…" instead also changes the screen.
+if xdotool search --name 'CodexBar Settings' >/dev/null 2>&1; then
+    echo "The About click opened the settings window" >&2
     failed=1
 fi
 kill "$about_pid" 2>/dev/null || true
@@ -198,7 +205,7 @@ plasmoidviewer -a "$(package settings "$three" notifyQuota=true notifyStatus=tru
 settings_pid=$!
 sleep "${SMOKE_WAIT:-15}"
 # "Settings…" at the bottom of the popup opens the configuration window.
-xdotool mousemove 60 454 click 1
+xdotool mousemove 60 474 click 1
 sleep 5
 settings_window="$(xdotool search --name 'CodexBar Settings' | head -n 1)"
 if [[ -z "$settings_window" ]]; then
@@ -235,7 +242,7 @@ plasmoidviewer -a "$(package external "$three" refreshIntervalMinutes=1)" -s 560
     >"$out/settings-external.log" 2>&1 &
 external_pid=$!
 sleep "${SMOKE_WAIT:-15}"
-xdotool mousemove 60 454 click 1
+xdotool mousemove 60 474 click 1
 sleep 5
 external_window="$(xdotool search --name 'CodexBar Settings' | head -n 1)"
 if [[ -z "$external_window" ]]; then
@@ -274,7 +281,7 @@ if grep -q -E ' usage .*--source' "$CODEXBAR_MOCK_STATE.calls"; then
     echo "Probes still pass --source with the sources in config.json" >&2
     failed=1
 fi
-xdotool mousemove 60 454 click 1
+xdotool mousemove 60 474 click 1
 sleep 5
 sources_window="$(xdotool search --name 'CodexBar Settings' | head -n 1)"
 if [[ -z "$sources_window" ]]; then
