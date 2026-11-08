@@ -6,7 +6,7 @@
 .pragma library
 
 var PROVIDERS = {
-    // Order follows `codexbar usage --help` (CodexBar 0.80.0).
+    // Order follows `codexbar usage --help` (CodexBar 0.84.0).
     "codex":        { name: "Codex",              color: "#49A3B0", dashboard: "https://chatgpt.com/settings/usage?tab=overview", status: "https://status.openai.com/", icon: "ProviderIcon-codex.svg", critter: "codex" },
     "openai":       { name: "OpenAI",             color: "#0F826E", dashboard: "https://platform.openai.com/usage", status: "https://status.openai.com", icon: "ProviderIcon-codex.svg" },
     "azure-openai": { name: "Azure OpenAI",       color: "#0078D4", dashboard: "https://ai.azure.com", status: "https://azure.status.microsoft/en-us/status", icon: "ProviderIcon-codex.svg" },
@@ -114,7 +114,12 @@ var PROVIDERS = {
     "parallel":     { name: "Parallel",           color: "#1D1C1A", dashboard: "https://platform.parallel.ai", status: "", icon: "ProviderIcon-parallel.svg", minCli: "0.75.0" },
     "claudeplatform": { name: "Claude Platform",    color: "#CC7C5E", dashboard: "https://platform.claude.com/settings/billing", status: "https://status.claude.com/", icon: "ProviderIcon-claudeplatform.svg", minCli: "0.76.0" },
     "munito":       { name: "Munito",             color: "#702CF6", dashboard: "https://console.munito.ai", status: "", icon: "ProviderIcon-munito.svg", minCli: "0.77.0" },
-    "traecn":       { name: "Trae CN",            color: "#4D7CFE", dashboard: "https://www.trae.cn/dashboard#usage", status: "", icon: "ProviderIcon-traecn.svg", minCli: "0.80.0" }
+    "traecn":       { name: "Trae CN",            color: "#4D7CFE", dashboard: "https://www.trae.cn/dashboard#usage", status: "", icon: "ProviderIcon-traecn.svg", minCli: "0.80.0" },
+    "chatbox":      { name: "Chatbox AI",         color: "#228BE6", dashboard: "https://chatboxai.app", status: "", icon: "ProviderIcon-chatbox.svg", minCli: "0.81.0" },
+    "abliteration": { name: "abliteration.ai",    color: "#1B1B1B", dashboard: "https://abliteration.ai", status: "", icon: "ProviderIcon-abliteration.svg", minCli: "0.81.0" },
+    "opendesign":   { name: "OpenDesign",         color: "#202020", dashboard: "https://open-design.ai/cloud/dashboard", status: "", icon: "ProviderIcon-opendesign.svg", minCli: "0.83.0" },
+    "siliconflow":  { name: "SiliconFlow",        color: "#6E29F5", dashboard: "https://cloud.siliconflow.cn", status: "", icon: "ProviderIcon-siliconflow.svg", minCli: "0.84.0" },
+    "tripo":        { name: "Tripo",              color: "#F8CF00", dashboard: "https://developers.tripo3d.ai/en/billing", status: "https://tripo3d.statuspage.io", icon: "ProviderIcon-tripo.svg", minCli: "0.84.0" }
 }
 
 // Providers whose local logs the `codexbar cost` command can price.
