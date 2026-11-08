@@ -43,8 +43,7 @@ ColumnLayout {
                 title: Catalog.slotTitle(providerId, slot, minutes),
                 win: w,
                 minutes: minutes,
-                pace: minutes === 10080 && entry.pace && entry.pace.secondary
-                      ? entry.pace.secondary : null
+                pace: Catalog.slotPace(entry, slot)
             })
         }
         // Kimi's transport slots are inverted. Keep legacy ordering for every

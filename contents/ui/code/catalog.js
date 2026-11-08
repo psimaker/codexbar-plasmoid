@@ -497,16 +497,25 @@ function windowBarFill(w, showUsed) {
     return showUsed ? used : 100 - used
 }
 
-// Menu pace line, matching CodexBarCore UsagePace / UsagePaceText. Kimi does
-// not return the CLI's pre-computed `pace` payload, so reproduce that logic
-// from the weekly window without rounding the values used in the projection.
+// The CLI's pace payload for a rate-window slot, or null. CodexBar computes
+// it per slot (`pace.primary`, `.secondary`, `.tertiary`) for every window
+// the provider's descriptor paces: session, weekly and monthly alike.
+function slotPace(entry, slot) {
+    var pace = entry && entry.pace && typeof entry.pace === "object" ? entry.pace[slot] : null
+    return pace && typeof pace === "object" ? pace : null
+}
+
+// Menu pace line, matching CodexBarCore UsagePace / UsagePaceText. Without
+// the CLI's pre-computed `pace` payload (Kimi, extra rate windows, Claude
+// accounts), reproduce that logic for any window of known duration without
+// rounding the values used in the projection.
 function paceLine(pace, win, windowMinutes, nowMs, providerId) {
     if (pace && pace.summary) {
         var parts = pace.summary.split("|").map(function (p) { return p.trim() })
         var keep = parts.filter(function (p) { return p.indexOf("Expected") !== 0 })
         if (keep.length > 0) return "Pace: " + keep.join(" · ")
     }
-    if (windowMinutes !== 10080 || !windowUsageKnown(win) || !win.resetsAt)
+    if (!(windowMinutes > 0) || !windowUsageKnown(win) || !win.resetsAt)
         return ""
 
     var resetMs = Date.parse(win.resetsAt)
@@ -520,7 +529,7 @@ function paceLine(pace, win, windowMinutes, nowMs, providerId) {
     if (elapsed === 0 && actual > 0)
         return ""
     var expected = (elapsed / durationMs) * 100
-    // CodexBarCore hides pace until enough of the weekly window has elapsed.
+    // CodexBarCore hides pace until enough of the window has elapsed.
     if (expected < 3 && actual < 100)
         return ""
     var delta = actual - expected

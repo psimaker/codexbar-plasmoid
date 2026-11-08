@@ -91,14 +91,51 @@ assert.equal(
     "Pace: 11% in reserve · Lasts until reset"
 )
 
+// Pace covers every window of known duration (#76), session included.
 const sessionMinutes = catalog.effectiveWindowMinutes(
     sessionExtra, "codex", "extra"
 )
 assert.equal(sessionMinutes, 300)
 assert.equal(
     catalog.paceLine(null, sessionExtra, sessionMinutes, now, "codex"),
-    ""
+    "Pace: 50% in reserve · Lasts until reset"
 )
+const monthlyWindow = { usedPercent: 80, windowMinutes: 43200, resetsAt: "2026-09-09T12:00:00Z" }
+assert.equal(catalog.paceLine(null, monthlyWindow, 43200, now, "opencodego"),
+    "Pace: 13% in deficit · Runs out in 5d")
+const dailyWindow = { usedPercent: 40, windowMinutes: 1440, resetsAt: "2026-08-31T00:00:00Z" }
+assert.equal(catalog.paceLine(null, dailyWindow, 1440, now, "myplugin"),
+    "Pace: 10% in reserve · Lasts until reset")
+// the existing guards hold for every duration: no duration, no reading, a
+// reset in the past or further away than the window, or under 3 % elapsed
+const noDuration = { usedPercent: 10, resetsAt: "2026-08-30T14:00:00Z" }
+assert.equal(catalog.effectiveWindowMinutes(noDuration, "zai", "tertiary"), 0)
+assert.equal(catalog.paceLine(null, noDuration, 0, now, "zai"), "")
+assert.equal(catalog.paceLine(null, Object.assign({}, sessionExtra, { usageKnown: false }), 300, now, "codex"), "")
+assert.equal(catalog.paceLine(null, Object.assign({}, sessionExtra, { resetsAt: "2026-08-30T11:00:00Z" }), 300, now, "codex"), "")
+assert.equal(catalog.paceLine(null, Object.assign({}, sessionExtra, { resetsAt: "2026-08-30T18:00:00Z" }), 300, now, "codex"), "")
+assert.equal(catalog.paceLine(null, Object.assign({}, sessionExtra, { resetsAt: "2026-08-30T16:55:00Z" }), 300, now, "codex"), "")
+
+// The CLI's pace payload belongs to the slot it is reported for, whatever the
+// window's duration (opencode-go paces its 5-hour, weekly and monthly slots).
+const opencodeGo = {
+    pace: {
+        primary: { summary: "6% in reserve | Expected 6% used | Lasts until reset" },
+        secondary: null,
+        tertiary: { summary: "11% in reserve | Expected 30% used | Lasts until reset" },
+    },
+}
+assert.equal(catalog.paceLine(catalog.slotPace(opencodeGo, "primary"), sessionExtra, 300, now, "opencodego"),
+    "Pace: 6% in reserve · Lasts until reset")
+assert.equal(catalog.paceLine(catalog.slotPace(opencodeGo, "tertiary"), monthlyWindow, 43200, now, "opencodego"),
+    "Pace: 11% in reserve · Lasts until reset")
+// a slot without a payload falls back to the local reconstruction
+assert.equal(catalog.slotPace(opencodeGo, "secondary"), null)
+assert.equal(catalog.paceLine(catalog.slotPace(opencodeGo, "secondary"), weeklyExtra, 10080, now, "opencodego"),
+    "Pace: 11% in reserve · Lasts until reset")
+assert.equal(catalog.slotPace({}, "primary"), null)
+assert.equal(catalog.slotPace({ pace: "broken" }, "primary"), null)
+assert.equal(catalog.slotPace(null, "primary"), null)
 
 // objects cross the vm boundary with a foreign prototype; compare plain copies
 function plain(value) { return JSON.parse(JSON.stringify(value)) }
