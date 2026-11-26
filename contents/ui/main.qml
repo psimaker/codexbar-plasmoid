@@ -971,6 +971,13 @@ PlasmoidItem {
         return Catalog.panelWindow(d.entry.usage, p, source)
     }
 
+    // The balance p's panel label can show (Catalog.panelBalance), or "".
+    function panelBalance(p) {
+        rev
+        var d = usageData[p]
+        return d && d.entry ? Catalog.panelBalance(p, d.entry.usage) : ""
+    }
+
     // remaining percent for the panel icon / percent label; -1 = unknown
     function remainingPercent(p, source) {
         var pick = panelPick(p, source)

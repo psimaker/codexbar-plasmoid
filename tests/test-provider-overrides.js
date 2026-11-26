@@ -128,12 +128,12 @@ assert.deepEqual(plain(lib.panelIconModel("{}", [], globals, true)), { icons: ["
 
 // setting registry: the single source for per-provider mirroring
 assert.deepEqual(plain(lib.SETTING_KEYS),
-    ["panelDisplayMode", "showPercentInPanel",
+    ["panelDisplayMode", "showPercentInPanel", "panelValue",
      "panelPercentSource", "percentStyle", "showResetCountdown", "hideCritters",
      "middleClickAction", "doubleClickAction", "launchCommand"])
 assert.equal(lib.defFor("nope"), null)
 assert.deepEqual(plain(lib.keysForSection("percentage")),
-    ["panelPercentSource", "percentStyle", "showResetCountdown"])
+    ["panelValue", "panelPercentSource", "percentStyle", "showResetCountdown"])
 assert.deepEqual(plain(lib.keysForSection("nope")), [])
 
 // every registry entry is well formed and validation follows it
@@ -163,6 +163,21 @@ for (const key of lib.SETTING_KEYS) {
 assert.equal(plain(lib.defFor("panelPercentSource")).requires, "showPercentInPanel")
 assert.equal(plain(lib.defFor("percentStyle")).requires, "showPercentInPanel")
 assert.equal(plain(lib.defFor("showResetCountdown")).requires, "showPercentInPanel")
+assert.equal(plain(lib.defFor("panelValue")).requires, "showPercentInPanel")
+// the panel label's value (#73) has no global setting: a percentage unless a
+// provider asks for its balance
+assert.equal(lib.effectivePanelValue("{}", "claude"), "percent")
+assert.equal(lib.effectivePanelValue('{"claude":{"panelValue":"balance"}}', "claude"), "balance")
+assert.equal(lib.effectivePanelValue('{"claude":{"panelValue":"balance"}}', "codex"), "percent")
+assert.equal(lib.effectivePanelValue('{"claude":{"panelValue":"dollars"}}', "claude"), "percent")
+// without an override a provider shows what it shows automatically
+assert.equal(lib.effectivePanelValue("{}", "deepseek", "balance"), "balance")
+assert.equal(lib.effectivePanelValue('{"deepseek":{"panelValue":"percent"}}', "deepseek", "balance"), "percent")
+assert.equal(lib.effectivePanelValue("{}", "claude", "bogus"), "percent")
+assert.equal(lib.withSettings("{}", "claude", { panelValue: "balance" }), '{"claude":{"panelValue":"balance"}}')
+// asking for the balance gives the provider its own icon, like any override
+assert.deepEqual(layout('{"claude":{"panelValue":"balance"}}'),
+    { icons: ["__merged__", "claude"], merged: ["codex", "gemini"] })
 // click actions (#18): per-provider action and command, else the globals
 assert.deepEqual(plain(lib.keysForSection("clicks")),
     ["middleClickAction", "doubleClickAction", "launchCommand"])

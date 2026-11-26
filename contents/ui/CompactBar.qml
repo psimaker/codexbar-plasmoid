@@ -138,6 +138,22 @@ MouseArea {
             Plasmoid.configuration.percentStyle)
     }
 
+    // The balance an icon's label shows instead of a percentage (#73): always
+    // for a provider without a quota window, which would show "–", and for
+    // one with both when its override asks for the balance (by default only
+    // DeepSeek, whose window stands for its balance). The merged meter stays
+    // a percentage.
+    function balanceFor(pid, pick) {
+        if (pid === "__merged__")
+            return ""
+        var balance = plasmoidRoot.panelBalance(pid)
+        if (balance === "" || pick === null)
+            return balance
+        var automatic = Catalog.balanceReplacesPercent(pid) ? "balance" : "percent"
+        return ProviderOverrides.effectivePanelValue(compactRoot.overrides, pid, automatic) === "balance"
+            ? balance : ""
+    }
+
     function showCountdownFor(pid) {
         if (pid === "__merged__")
             return Plasmoid.configuration.showResetCountdown
@@ -318,9 +334,11 @@ MouseArea {
                     id: percentBlock
                     readonly property var pick: compactRoot.pickFor(
                         providerItem.providerId, compactRoot.percentSourceFor(providerItem.providerId))
+                    readonly property string balance: compactRoot.balanceFor(providerItem.providerId, pick)
                     // Time until the same window resets, like upstream's
                     // "Percent + reset" menu bar layout.
-                    readonly property string countdown: compactRoot.showCountdownFor(providerItem.providerId)
+                    readonly property string countdown: balance === ""
+                        && compactRoot.showCountdownFor(providerItem.providerId)
                         ? Catalog.panelCountdown(pick, plasmoidRoot.nowMs) : ""
                     // Logo modes label real providers only; do not present
                     // their empty fallback as a merged percentage value.
@@ -332,6 +350,8 @@ MouseArea {
                     PlasmaComponents3.Label {
                         font.pixelSize: Math.max(9, Math.round(compactRoot.iconSide * 0.62))
                         text: {
+                            if (percentBlock.balance !== "")
+                                return percentBlock.balance
                             if (!percentBlock.pick)
                                 return "–"
                             var v = percentBlock.pick.remaining
