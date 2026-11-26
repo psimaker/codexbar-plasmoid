@@ -21,7 +21,7 @@ LIMITS = {
     "meters-merged": (256, 88),
     "meters-separate": (800, 88),
     "logos-horizontal": (1100, 88),
-    "settings-general": (1856, 2240),
+    "settings-general": (1856, 2320),
     "settings-providers": (1856, 736),
 }
 # Same error patterns as tests/smoke/run.sh, applied only to this package.

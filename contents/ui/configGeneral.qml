@@ -244,13 +244,13 @@ KCM.SimpleKCM {
 
         QQC2.CheckBox {
             id: notifyFailures
-            text: i18n("When a provider keeps failing to refresh")
+            text: i18n("When a provider fails two refreshes in a row")
         }
 
         QQC2.Label {
             Layout.fillWidth: true
             Layout.maximumWidth: page.hintWidth
-            text: i18n("Only changes seen while the widget runs are announced, never what it finds on start. Status changes need \"Show provider status\". A provider keeps failing after two failed refreshes in a row; it is announced once until it refreshes again.")
+            text: i18n("Only changes seen while the widget runs are announced, never what it finds on start. Status changes need \"Show provider status\".")
             wrapMode: Text.WordWrap
             opacity: 0.7
             font: Kirigami.Theme.smallFont
