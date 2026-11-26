@@ -116,6 +116,16 @@ expect_extent panel-balance height 16 40 640x88+0+0
 config_state="codex claude replicate" render panel-balance-vertical "$(package balance-vertical \
     "${balances[@]}" separateIcons=true)" 160x520 -c org.kde.panel -f vertical -l leftedge
 expect_extent panel-balance-vertical width 40 160 160x460+0+0
+# A provider whose refresh fails gets a warning emblem on its panel icon
+# (#74). Antigravity's CLI process crashes here, so its logo warns.
+CODEXBAR_MOCK_CRASH=antigravity render panel-stale "$(package stale "$three" panelDisplayMode=logos \
+    showPercentInPanel=true)" 640x140 "${panel[@]}"
+expect_extent panel-stale height 16 40 640x88+0+0
+# The merged meter warns too, as Antigravity could be lower than the value
+# it shows.
+CODEXBAR_MOCK_CRASH=antigravity render panel-stale-merged "$(package stale-merged "$three" \
+    showPercentInPanel=true)" 640x140 "${panel[@]}"
+expect_extent panel-stale-merged height 16 40 640x88+0+0
 render popup "$(package popup "$three")" 560x860 -f planar
 render popup-used "$(package popup-used "$three" usageBarsShowUsed=true)" 560x860 -f planar
 # A provider only config.json knows, such as a user plugin, still shows up.

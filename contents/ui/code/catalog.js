@@ -400,6 +400,21 @@ function updatedText(isoDate, nowMs) {
     return "Updated " + Math.floor(s / 86400) + "d ago"
 }
 
+// Why a provider's numbers may be out of date, for the panel's warning
+// emblem and the tooltip (#74): the CLI's error when its last refresh failed,
+// else the age of data fetched longer than maxAgeMs ago. "" while the data is
+// current, and before the provider's first answer, so starting up shows no
+// warning. data is the provider's entry in the widget's usageData.
+function staleReason(data, maxAgeMs, nowMs) {
+    if (!data || !data.fetchedAt)
+        return ""
+    if (typeof data.error === "string" && data.error.trim() !== "")
+        return data.error.trim()
+    if (nowMs - data.fetchedAt > maxAgeMs)
+        return updatedText(new Date(data.fetchedAt).toISOString(), nowMs)
+    return ""
+}
+
 // --- rate-window helpers (synthetic placeholders, unknown usage) ---
 
 // The CLI marks windows it invented as isSyntheticPlaceholder; treat those
