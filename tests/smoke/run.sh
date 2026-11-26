@@ -121,6 +121,10 @@ config_state="antigravity" CODEXBAR_MOCK_CRASH=antigravity render popup-crash \
 expect_config antigravity
 # A prepaid balance in usage.providerCost shows on the provider's card (#58).
 config_state="claude" render popup-balance "$(package balance enabledProviders=claude)" 560x860 -f planar
+# A detail-backed window takes the CLI's name for it (TrustedRouter's "Limit")
+# and shows its detail ("$1.80 / $10.00") instead of "Resets …".
+config_state="trustedrouter" render popup-detail "$(package detail enabledProviders=trustedrouter)" \
+    560x860 -f planar
 # A config.json the CLI cannot write: the migration fails, the widget keeps
 # its own list, and the popup shows the CLI's error.
 CODEXBAR_MOCK_READONLY=1 render popup-readonly "$(package readonly "$three")" 560x860 -f planar

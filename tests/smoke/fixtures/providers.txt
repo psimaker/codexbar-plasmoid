@@ -2,4 +2,5 @@ codex codex Codex
 claude claude Claude
 antigravity antigravity Antigravity
 groq groqcloud Groq
+trustedrouter trustedrouter TrustedRouter
 myplugin myplugin My Plugin
