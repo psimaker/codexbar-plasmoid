@@ -127,6 +127,21 @@ var PROVIDERS = {
 // Providers whose local logs the `codexbar cost` command can price.
 var COST_PROVIDERS = ["claude", "codex"]
 
+// Providers whose rate windows carry a detail such as "$1.80 / $10.00" in
+// resetDescription instead of a reset time (usesDetailBackedWindow in their
+// upstream descriptors). Like the CLI, their cards say "Resets …" only for a
+// reset date and show the description as a detail line (windowDetail).
+var DETAIL_BACKED_WINDOWS = [
+    "abacusai", "abliteration", "aixy", "bifrost", "chutes", "claudeplatform",
+    "deepinfra", "deepseek", "googledeveloper", "kilo", "llmman", "litellm",
+    "longcat", "manus", "mimo", "mistral", "neuralwatt", "perplexity", "qoder",
+    "raycast", "trustedrouter", "v0", "warp", "workbuddy"
+]
+
+function isDetailBacked(id) {
+    return DETAIL_BACKED_WINDOWS.indexOf(id) >= 0
+}
+
 // Display names of providers the catalog does not know, such as user plugins
 // listed in CodexBar's config.json.
 var EXTRA_NAMES = {}
@@ -304,8 +319,9 @@ function showsCostFallback(providerId, cost) {
 }
 
 // "Resets in 3h 53m" / "Resets in 3d 20h" — like the original menu rows.
-// Falls back to the CLI's resetDescription when no exact timestamp exists.
-function resetText(win, nowMs) {
+// Falls back to the CLI's resetDescription when no exact timestamp exists,
+// except for detail-backed windows, whose description is no reset time.
+function resetText(win, nowMs, detailBacked) {
     if (!win) return ""
     if (win.resetsAt) {
         var t = Date.parse(win.resetsAt)
@@ -315,11 +331,21 @@ function resetText(win, nowMs) {
             return "Resets in " + duration(s)
         }
     }
+    if (detailBacked === true)
+        return ""
     if (win.resetDescription) {
         var desc = win.resetDescription.trim()
         return desc.toLowerCase().indexOf("reset") === 0 ? desc : "Resets " + desc
     }
     return ""
+}
+
+// The detail line of a detail-backed provider's window, such as
+// "$1.80 / $10.00" (CLIRenderer's detailLineForDetailBackedWindow).
+function windowDetail(win, providerId) {
+    if (!win || !isDetailBacked(providerId) || typeof win.resetDescription !== "string")
+        return ""
+    return win.resetDescription.trim()
 }
 
 function duration(s) {
@@ -610,9 +636,28 @@ function cardSlots(usage, providerId) {
     return ["primary", "secondary", "tertiary"]
 }
 
-// Card title for a slot window. Antigravity's slots are model families
+// The name CodexBar gives a slot's window, from the `rateWindowLabels` the
+// CLI reports next to the usage (CodexBar 0.65 and newer): Copilot's
+// "Premium" and "Chat", Gemini's "Pro", "Flash" and "Flash Lite", or "Limit"
+// for TrustedRouter's key limit. "" when there is none. A provider without a
+// name for its third window gets the generic "Sonnet" there, which upstream
+// does not show; only Claude's third window is Sonnet.
+function windowLabel(labels, slot, providerId) {
+    var label = labels !== null && typeof labels === "object" ? labels[slot] : null
+    if (typeof label !== "string")
+        return ""
+    label = label.trim()
+    if (slot === "tertiary" && label === "Sonnet" && providerId !== "claude")
+        return ""
+    return label
+}
+
+// Card title for a slot window: CodexBar's name for it (windowLabel), else
+// one from its duration or slot. Antigravity's slots are model families
 // (CodexBarCore's session/weekly labels for it), not time windows.
-function slotTitle(providerId, slot, windowMinutes) {
+function slotTitle(providerId, slot, windowMinutes, label) {
+    if (typeof label === "string" && label !== "")
+        return label
     if (providerId === "antigravity") {
         if (slot === "primary") return "Gemini Models"
         if (slot === "secondary") return "Claude and GPT"
@@ -623,8 +668,9 @@ function slotTitle(providerId, slot, windowMinutes) {
 }
 
 // The windows notifications watch, as the card lists them: [{ key, label,
-// remaining, resetsAt }] for every window with a known reading.
-function notificationWindows(usage, providerId) {
+// remaining, resetsAt }] for every window with a known reading. labels are
+// the entry's rateWindowLabels.
+function notificationWindows(usage, providerId, labels) {
     var out = []
     if (!usage)
         return out
@@ -635,7 +681,8 @@ function notificationWindows(usage, providerId) {
             continue
         out.push({
             key: slots[i],
-            label: slotTitle(providerId, slots[i], effectiveWindowMinutes(w, providerId, slots[i])),
+            label: slotTitle(providerId, slots[i], effectiveWindowMinutes(w, providerId, slots[i]),
+                             windowLabel(labels, slots[i], providerId)),
             remaining: 100 - normalizedPercent(w.usedPercent),
             resetsAt: typeof w.resetsAt === "string" ? w.resetsAt : ""
         })

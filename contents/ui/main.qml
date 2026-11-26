@@ -915,7 +915,7 @@ PlasmoidItem {
         var status = d.entry.status || {}
         return {
             failed: false,
-            windows: Catalog.notificationWindows(d.entry.usage, p),
+            windows: Catalog.notificationWindows(d.entry.usage, p, d.entry.rateWindowLabels),
             statusLevel: typeof status.indicator === "string" ? status.indicator : "",
             statusText: typeof status.description === "string" ? status.description : ""
         }

@@ -40,7 +40,8 @@ ColumnLayout {
                 continue
             var minutes = Catalog.effectiveWindowMinutes(w, providerId, slot)
             out.push({
-                title: Catalog.slotTitle(providerId, slot, minutes),
+                title: Catalog.slotTitle(providerId, slot, minutes,
+                                         Catalog.windowLabel(entry.rateWindowLabels, slot, providerId)),
                 win: w,
                 minutes: minutes,
                 pace: Catalog.slotPace(entry, slot)
@@ -256,10 +257,21 @@ ColumnLayout {
                 Item { Layout.fillWidth: true }
 
                 PlasmaComponents3.Label {
-                    text: Catalog.resetText(section.modelData.win, plasmoidRoot.nowMs)
+                    text: Catalog.resetText(section.modelData.win, plasmoidRoot.nowMs,
+                                            Catalog.isDetailBacked(card.providerId))
                     opacity: 0.6
                     font: Kirigami.Theme.smallFont
                 }
+            }
+
+            // what a detail-backed window reports instead of a reset time
+            TruncatedLabel {
+                visible: text !== ""
+                text: Catalog.windowDetail(section.modelData.win, card.providerId)
+                opacity: 0.6
+                font: Kirigami.Theme.smallFont
+                Layout.fillWidth: true
+                elide: Text.ElideRight
             }
 
             TruncatedLabel {
