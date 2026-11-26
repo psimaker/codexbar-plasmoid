@@ -31,6 +31,7 @@ QQC2.Dialog {
     // Sample quota values for the footer preview.
     readonly property int previewSampleSession: 72
     readonly property int previewSampleWeekly: 45
+    readonly property real previewSampleBalance: 14.46
     // Same icon size the panel uses, so the preview renders 1:1.
     readonly property real previewIconSide: Kirigami.Units.iconSizes.medium
 
@@ -92,6 +93,9 @@ QQC2.Dialog {
     }
 
     function globalValue(key) {
+        // The label's value has no General setting; it follows the provider.
+        if (key === "panelValue")
+            return Catalog.balanceReplacesPercent(dialog.providerId) ? "balance" : "percent"
         return dialog.globals[key]
     }
 
@@ -109,6 +113,10 @@ QQC2.Dialog {
         if (source === "lowest")
             return i18n("Lowest remaining")
         return i18n("Session (5-hour)")
+    }
+
+    function panelValueLabel(value) {
+        return value === "balance" ? i18n("Balance") : i18n("Percentage")
     }
 
     function percentStyleLabel(style) {
@@ -144,6 +152,8 @@ QQC2.Dialog {
             return i18n("Panel display:")
         if (key === "showPercentInPanel")
             return i18n("Show percentage:")
+        if (key === "panelValue")
+            return i18n("Label shows:")
         if (key === "panelPercentSource")
             return i18n("Percentage window:")
         if (key === "percentStyle")
@@ -178,6 +188,8 @@ QQC2.Dialog {
         var values = dialog.optionValues(key)
         if (key === "panelDisplayMode")
             return values.map(dialog.displayModeLabel)
+        if (key === "panelValue")
+            return values.map(dialog.panelValueLabel)
         if (key === "panelPercentSource")
             return values.map(dialog.percentSourceLabel)
         if (key === "percentStyle")
@@ -193,6 +205,9 @@ QQC2.Dialog {
             return i18n("Global: %1", dialog.displayModeLabel(g.panelDisplayMode))
         if (key === "showPercentInPanel")
             return g.showPercentInPanel ? i18n("Global: shown") : i18n("Global: hidden")
+        if (key === "panelValue")
+            return Catalog.balanceReplacesPercent(dialog.providerId)
+                ? i18n("Global: balance") : i18n("Global: percentage, else balance")
         if (key === "panelPercentSource")
             return i18n("Global: %1", dialog.percentSourceLabel(g.panelPercentSource))
         if (key === "percentStyle")
@@ -291,6 +306,9 @@ QQC2.Dialog {
 
     function previewPercentText() {
         var raw = dialog.previewOverrides()
+        if (ProviderOverrides.effectivePanelValue(raw, dialog.providerId,
+                                                  dialog.globalValue("panelValue")) === "balance")
+            return Catalog.amountText(dialog.previewSampleBalance, "USD")
         var source = ProviderOverrides.effectivePercentSource(
             raw, dialog.providerId, dialog.globals.panelPercentSource)
         var v = source === "weekly" ? dialog.previewSampleWeekly

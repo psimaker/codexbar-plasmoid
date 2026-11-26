@@ -105,6 +105,17 @@ expect_extent panel-countdown height 16 40 640x88+0+0
 render panel-vertical "$(package vertical "$three" showPercentInPanel=true showResetCountdown=true \
     separateIcons=true)" 160x520 -c org.kde.panel -f vertical -l leftedge
 expect_extent panel-vertical width 40 120 160x460+0+0
+# Balances in the panel label (#73): Replicate reports no quota window, so it
+# shows its balance instead of "–", and Claude's override asks for its extra
+# usage balance instead of the percentage. Codex keeps its percentage.
+balances=(enabledProviders=codex,claude,replicate showPercentInPanel=true
+    'providerOverrides={"claude":{"panelValue":"balance"}}')
+config_state="codex claude replicate" render panel-balance "$(package balance-panel "${balances[@]}" \
+    panelDisplayMode=logos)" 640x140 "${panel[@]}"
+expect_extent panel-balance height 16 40 640x88+0+0
+config_state="codex claude replicate" render panel-balance-vertical "$(package balance-vertical \
+    "${balances[@]}" separateIcons=true)" 160x520 -c org.kde.panel -f vertical -l leftedge
+expect_extent panel-balance-vertical width 40 160 160x460+0+0
 render popup "$(package popup "$three")" 560x860 -f planar
 render popup-used "$(package popup-used "$three" usageBarsShowUsed=true)" 560x860 -f planar
 # A provider only config.json knows, such as a user plugin, still shows up.

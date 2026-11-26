@@ -300,6 +300,34 @@ function costBalances(providerId, cost) {
     }
 }
 
+// The balance a provider's panel label shows (#73): the first balance its
+// card lists (costBalances), written as the card writes it, or "" when the
+// provider reports none. DeepSeek reports its balance only in its window's
+// description ("¥12.34 (Paid: ¥10.00 / Granted: ¥2.34)"), whose first part
+// upstream's menu bar shows (deepSeekBalanceText).
+function panelBalance(providerId, usage) {
+    if (!usage)
+        return ""
+    var balances = costBalances(providerId, usage.providerCost)
+    if (balances.length > 0)
+        return amountText(balances[0].amount, balances[0].currencyCode)
+    if (providerId === "deepseek") {
+        var w = usableWindow(usage.primary)
+        var description = w && typeof w.resetDescription === "string" ? w.resetDescription.trim() : ""
+        if (description.charAt(0) === "$" || description.charAt(0) === "¥")
+            return description.split(" ")[0]
+    }
+    return ""
+}
+
+// Whether a provider's label shows its balance rather than the percentage of
+// its window unless an override says otherwise: DeepSeek's only window stands
+// for its balance, so its percentage means nothing (upstream's menu bar shows
+// the balance there too).
+function balanceReplacesPercent(providerId) {
+    return providerId === "deepseek"
+}
+
 // Whether a card without a usable primary window shows the generic
 // "Cost: used / limit" line; balance-only snapshots do not.
 function showsCostFallback(providerId, cost) {

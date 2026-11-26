@@ -1,0 +1,1 @@
+[{"provider":"replicate","source":"api","usage":{"providerCost":{"used":3.25,"limit":0,"currencyCode":"USD","period":"This month","balance":42.5,"updatedAt":"@NOW@"},"details":[{"title":"Billing","rows":[{"label":"Spent this month","value":"$3.25"},{"label":"Credit balance","value":"$42.50"}]}],"updatedAt":"@NOW@"}}]

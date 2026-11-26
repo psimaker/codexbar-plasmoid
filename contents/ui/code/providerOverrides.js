@@ -21,6 +21,7 @@ var CLICK_ACTIONS = ["none", "refresh", "dashboard", "status", "command"]
 var DEFINITIONS = {
     panelDisplayMode: { section: "appearance", control: "enum", values: ["meters", "logos", "logos-and-meters"] },
     showPercentInPanel: { section: "appearance", control: "bool" },
+    panelValue: { section: "percentage", control: "enum", values: ["percent", "balance"], requires: "showPercentInPanel" },
     panelPercentSource: { section: "percentage", control: "enum", values: ["session", "weekly", "lowest"], requires: "showPercentInPanel" },
     percentStyle: { section: "percentage", control: "enum", values: ["remaining", "used"], requires: "showPercentInPanel" },
     showResetCountdown: { section: "percentage", control: "bool", requires: "showPercentInPanel" },
@@ -32,7 +33,7 @@ var DEFINITIONS = {
 
 // Dialog order: section order, then key order within each section.
 var SETTING_KEYS = ["panelDisplayMode",
-                    "showPercentInPanel", "panelPercentSource",
+                    "showPercentInPanel", "panelValue", "panelPercentSource",
                     "percentStyle", "showResetCountdown", "hideCritters",
                     "middleClickAction", "doubleClickAction", "launchCommand"]
 
@@ -43,6 +44,10 @@ var PERCENT_STYLES = DEFINITIONS.percentStyle.values
 var DEFAULT_DISPLAY_MODE = "meters"
 var DEFAULT_PERCENT_SOURCE = "session"
 var DEFAULT_PERCENT_STYLE = "remaining"
+// The panel label shows a percentage, or a provider's balance (#73). There is
+// no global setting: a provider without a quota window shows its balance
+// anyway, and one with both can pick it here.
+var DEFAULT_PANEL_VALUE = "percent"
 
 function defFor(key) {
     if (typeof key !== "string" || DEFINITIONS[key] === undefined)
@@ -225,6 +230,15 @@ function effectivePercentStyle(raw, id, globalStyle) {
     if (isValidPercentStyle(entry.percentStyle))
         return entry.percentStyle
     return isValidPercentStyle(globalStyle) ? globalStyle : DEFAULT_PERCENT_STYLE
+}
+
+// automatic is what the provider shows without an override ("percent" when
+// not given).
+function effectivePanelValue(raw, id, automatic) {
+    var entry = settingsFor(raw, id)
+    if (isValidValue("panelValue", entry.panelValue))
+        return entry.panelValue
+    return isValidValue("panelValue", automatic) ? automatic : DEFAULT_PANEL_VALUE
 }
 
 function effectiveShowResetCountdown(raw, id, globalShow) {

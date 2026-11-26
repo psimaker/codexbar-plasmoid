@@ -402,6 +402,30 @@ assert.deepEqual(plain(catalog.notificationWindows(
     { primary: { usedPercent: 30, windowMinutes: 1440 }, secondary: { usedPercent: 10, windowMinutes: 1440 } },
     "copilot", { primary: "Premium", secondary: "Chat" }).map((w) => w.label)), ["Premium", "Chat"])
 
+// The balance a panel label shows (#73) is the first one the card lists.
+assert.equal(catalog.panelBalance("replicate",
+    { providerCost: { used: 3.25, limit: 0, currencyCode: "USD", period: "This month", balance: 42.5 } }), "$ 42.50")
+assert.equal(catalog.panelBalance("claude",
+    { providerCost: { used: 3.2, limit: 50, currencyCode: "USD", period: "Monthly", balance: 14.46 } }), "$ 14.46")
+assert.equal(catalog.panelBalance("siliconflow",
+    { providerCost: { used: 0, limit: 0, currencyCode: "CNY", balance: 12.3 } }), "12.30 CNY")
+assert.equal(catalog.panelBalance("codex",
+    { providerCost: { used: 0, limit: 0, currencyCode: "Credits", balance: 1200 } }), "1200.00 Credits")
+// DeepSeek's balance is the start of its window's description, and it
+// replaces the window's meaningless percentage
+const deepseek = (description) => ({ primary: { usedPercent: 0, resetDescription: description } })
+assert.equal(catalog.panelBalance("deepseek", deepseek("¥12.34 (Paid: ¥10.00 / Granted: ¥2.34)")), "¥12.34")
+assert.equal(catalog.panelBalance("deepseek", deepseek("$0.00 — add credits at platform.deepseek.com")), "$0.00")
+assert.equal(catalog.panelBalance("deepseek", deepseek("Balance unavailable for API calls")), "")
+assert.equal(catalog.panelBalance("deepinfra", deepseek("$5.00 (Paid: $5.00 / Granted: $0.00)")), "")
+assert.equal(catalog.balanceReplacesPercent("deepseek"), true)
+assert.equal(catalog.balanceReplacesPercent("claude"), false)
+// a spend without a balance, no cost at all or no usage show no balance
+assert.equal(catalog.panelBalance("cursor", { providerCost: { used: 12, limit: 100, currencyCode: "USD" } }), "")
+assert.equal(catalog.panelBalance("codex", { providerCost: { used: 0, limit: 0, currencyCode: "USD", balance: 5 } }), "")
+assert.equal(catalog.panelBalance("replicate", {}), "")
+assert.equal(catalog.panelBalance("replicate", null), "")
+
 // Reset countdown (#30): the window behind the panel percentage
 const countdownNow = Date.parse("2026-09-30T12:00:00Z")
 const pickAt = (resetsAt) => ({ remaining: 60, window: { usedPercent: 40, resetsAt } })

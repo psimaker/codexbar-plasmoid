@@ -3,4 +3,5 @@ claude claude Claude
 antigravity antigravity Antigravity
 groq groqcloud Groq
 trustedrouter trustedrouter TrustedRouter
+replicate replicate Replicate
 myplugin myplugin My Plugin
