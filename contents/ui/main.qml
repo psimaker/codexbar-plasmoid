@@ -651,8 +651,8 @@ PlasmoidItem {
         return i18n("No usage data — check CodexBar login/configuration (exit %1)", exitCode)
     }
 
-    // The CLI answered for other providers only, so it does not know this
-    // one: the provider is newer than the installed CLI or was removed.
+    // The CLI does not know this provider: it is newer than the installed
+    // CLI or was removed.
     function unsupportedProviderText(p) {
         var required = Catalog.meta(p).minCli
         if (required && cliState.detectedVersion !== ""
@@ -844,10 +844,15 @@ PlasmoidItem {
             if (trimmed.length > 0) {
                 try { parsed = JSON.parse(trimmed) } catch (e) { parseFailed = true }
             }
-            // An unknown --provider name makes the CLI report the providers
-            // enabled in its own config; only this provider's entries count.
+            // Only this provider's entries count (Catalog.entriesForProvider).
             var entries = Catalog.entriesForProvider(parsed, req.p)
             var cliError = Catalog.errorForProvider(parsed, req.p)
+            // The CLI does not know the provider: CodexBar 0.85.0 and newer
+            // reject its name, older releases answer for the providers
+            // enabled in their own config instead.
+            var unknownProvider = Catalog.rejectsProvider(parsed)
+                || (entries.length === 0 && cliError === ""
+                    && Array.isArray(parsed) && parsed.length > 0)
             if (entries.length > 0 && entries[0].usage) {
                 d.entry = entries[0]
                 d.entries = entries
@@ -855,16 +860,16 @@ PlasmoidItem {
                 d.errorCode = ""
                 cliState = CliStatus.applyUsageResult(
                     cliState, req.cliGeneration, exitCode, true, false)
-            } else if (cliError !== "") {
-                // The CLI explains the failure itself, such as a missing
-                // login or a config.json it cannot decode, so it works.
-                d.error = cliError
-                d.errorCode = ""
-            } else if (entries.length === 0 && Array.isArray(parsed) && parsed.length > 0) {
+            } else if (unknownProvider) {
                 // The CLI itself works, so its state stays as it is.
                 delete d.entry
                 delete d.entries
                 d.error = unsupportedProviderText(req.p)
+                d.errorCode = ""
+            } else if (cliError !== "") {
+                // The CLI explains the failure itself, such as a missing
+                // login or a config.json it cannot decode, so it works.
+                d.error = cliError
                 d.errorCode = ""
             } else {
                 d.error = usageErrorText(req.p, exitCode, parseFailed)

@@ -13,8 +13,9 @@ const catalog = {}
 vm.createContext(catalog)
 vm.runInContext(source, catalog, { filename: "catalog.js" })
 
-// An unknown --provider makes the CLI report the providers enabled in its
-// own config; only the requested provider's entries may be shown.
+// Before CodexBar 0.85.0 an unknown --provider made the CLI report the
+// providers enabled in its own config; only the requested provider's entries
+// may be shown.
 const fallbackReport = [
     { provider: "codex", source: "auto", usage: { primary: { usedPercent: 12 } } },
     { provider: "claude", source: "auto", usage: { primary: { usedPercent: 34 } } },
@@ -64,6 +65,21 @@ assert.equal(catalog.errorForProvider([{ provider: "claude", error: { code: 1 } 
 assert.equal(catalog.errorForProvider([{ provider: "cli", error: "broken" }], "claude"), "")
 assert.equal(catalog.errorForProvider(null, "claude"), "")
 assert.equal(catalog.errorForProvider({ provider: "cli", error: { message: "x" } }, "claude"), "")
+
+// CodexBar 0.85.0 rejects an unknown --provider with an argument error.
+const rejected = [{ provider: "cli", source: "cli", error: { code: 1, message: "Error: unknown provider 'hyper'", kind: "args" } }]
+assert.equal(catalog.rejectsProvider(rejected), true)
+assert.equal(catalog.entriesForProvider(rejected, "hyper").length, 0)
+// other argument errors, config and provider errors, usage and junk are not
+assert.equal(catalog.rejectsProvider([{ provider: "cli", source: "cli",
+    error: { code: 1, message: "Error: --source must be auto|web|cli|oauth|api.", kind: "args" } }]), false)
+assert.equal(catalog.rejectsProvider(cliEnvelope), false)
+assert.equal(catalog.rejectsProvider(geminiError), false)
+assert.equal(catalog.rejectsProvider([{ provider: "hyper", error: { kind: "args", message: "unknown provider" } }]), false)
+assert.equal(catalog.rejectsProvider(fallbackReport), false)
+assert.equal(catalog.rejectsProvider([{ provider: "cli", error: { kind: "args" } }]), false)
+assert.equal(catalog.rejectsProvider([null]), false)
+assert.equal(catalog.rejectsProvider(null), false)
 
 // fully colored logos keep a transparent chip; near-white brands get a dark one
 assert.equal(catalog.logoBackgroundColor("codebuff"), "transparent")
