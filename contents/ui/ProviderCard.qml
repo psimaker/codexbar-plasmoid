@@ -23,7 +23,10 @@ ColumnLayout {
     }
     readonly property var entry: d && d.entry ? d.entry : null
     readonly property var usage: entry && entry.usage ? entry.usage : null
-    readonly property color brandColor: meta.color
+    // The bars still show data from before a failed refresh.
+    readonly property bool retained: !!(usage && d.error && d.error.length > 0)
+    readonly property color barColor: Catalog.barColor(providerId, Kirigami.Theme.textColor,
+                                                       retained, Kirigami.Theme.disabledTextColor)
 
     spacing: Kirigami.Units.smallSpacing
 
@@ -240,7 +243,7 @@ ColumnLayout {
             UsageBar {
                 Layout.fillWidth: true
                 percent: Catalog.windowBarFill(section.modelData.win, Plasmoid.configuration.usageBarsShowUsed)
-                fillColor: card.brandColor
+                fillColor: card.barColor
             }
 
             RowLayout {
@@ -373,7 +376,7 @@ ColumnLayout {
                         visible: detailRow.modelData.percent >= 0
                         Layout.fillWidth: true
                         percent: Math.max(0, detailRow.modelData.percent)
-                        fillColor: card.brandColor
+                        fillColor: card.barColor
                     }
                 }
             }

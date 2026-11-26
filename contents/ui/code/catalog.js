@@ -142,6 +142,20 @@ function isDetailBacked(id) {
     return DETAIL_BACKED_WINDOWS.indexOf(id) >= 0
 }
 
+// Providers whose usage bars upstream draws in the text color rather than
+// the brand color (progressColorStyle: .label in their descriptors): white,
+// black or pale brands that would vanish on a light or a dark theme.
+var LABEL_COLORED_BARS = ["abliteration", "elevenlabs", "opendesign", "soniox", "trustedrouter", "vercel"]
+
+// The fill of a provider's usage bars, like upstream's menu card: the brand
+// color, the text color for LABEL_COLORED_BARS, and staleColor while the bars
+// still show the data from before a failed refresh.
+function barColor(id, textColor, retained, staleColor) {
+    if (retained === true)
+        return staleColor
+    return LABEL_COLORED_BARS.indexOf(id) >= 0 ? textColor : meta(id).color
+}
+
 // Display names of providers the catalog does not know, such as user plugins
 // listed in CodexBar's config.json.
 var EXTRA_NAMES = {}
