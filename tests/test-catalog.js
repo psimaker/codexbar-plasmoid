@@ -222,6 +222,17 @@ assert.equal(catalog.windowLabel({ secondary: "" }, "secondary", "mistral"), "")
 assert.equal(catalog.windowLabel({ primary: 5 }, "primary", "codex"), "")
 assert.equal(catalog.slotTitle("codex", "secondary", 10080, ""), "Weekly")
 
+// Usage bars: the brand color, the text color for brands that vanish on a
+// light or dark theme, and a muted color while showing data from before a
+// failed refresh.
+assert.equal(catalog.barColor("codex", "#232629", false, "#a0a0a0"), "#49A3B0")
+assert.equal(catalog.barColor("vercel", "#232629", false, "#a0a0a0"), "#232629")
+assert.equal(catalog.barColor("trustedrouter", "#fcfcfc"), "#fcfcfc")
+assert.equal(catalog.barColor("codex", "#232629", true, "#a0a0a0"), "#a0a0a0")
+assert.equal(catalog.barColor("myplugin", "#232629"), "#888888")
+for (const id of catalog.LABEL_COLORED_BARS)
+    assert.ok(catalog.PROVIDERS[id] !== undefined, id)
+
 // Detail-backed windows carry a detail instead of a reset time: their cards
 // say "Resets …" only for a reset date, like the CLI (TrustedRouter's key
 // limit, Google Developer Program's credit).

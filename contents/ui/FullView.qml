@@ -270,7 +270,7 @@ Item {
                                         percent: tab.remaining < 0 ? 0
                                                  : Plasmoid.configuration.usageBarsShowUsed
                                                    ? 100 - tab.remaining : tab.remaining
-                                        fillColor: tab.meta.color
+                                        fillColor: Catalog.barColor(tab.tabId, Kirigami.Theme.textColor)
                                     }
 
                                     MouseArea {

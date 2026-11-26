@@ -36,6 +36,9 @@ ColumnLayout {
                 return x ? Object.assign({}, x) : null
             }
             readonly property var usage: d && d.entry && d.entry.usage ? d.entry.usage : null
+            readonly property color barColor: Catalog.barColor(
+                providerId, Kirigami.Theme.textColor,
+                !!(usage && d.error && d.error.length > 0), Kirigami.Theme.disabledTextColor)
             // Rate-window slots are provider implementation details. Kimi returns
             // the weekly cap in primary and the five-hour cap in secondary.
             readonly property var primaryWin: usage ? Catalog.windowFor(usage, providerId, 300) : null
@@ -102,7 +105,7 @@ ColumnLayout {
                             Layout.fillWidth: true
                             implicitHeight: 4
                             percent: Catalog.windowBarFill(overviewRow.primaryWin, Plasmoid.configuration.usageBarsShowUsed)
-                            fillColor: overviewRow.meta.color
+                            fillColor: overviewRow.barColor
                             opacity: overviewRow.primaryWin ? 1 : 0.35
                         }
 
@@ -130,7 +133,7 @@ ColumnLayout {
                             Layout.fillWidth: true
                             implicitHeight: 4
                             percent: Catalog.windowBarFill(overviewRow.secondaryWin, Plasmoid.configuration.usageBarsShowUsed)
-                            fillColor: overviewRow.meta.color
+                            fillColor: overviewRow.barColor
                             opacity: overviewRow.secondaryWin ? 0.75 : 0.35
                         }
 

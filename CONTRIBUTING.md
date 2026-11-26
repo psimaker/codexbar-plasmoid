@@ -54,5 +54,5 @@ When the CodexBar CLI gains or drops providers:
 1. Regenerate `tests/data/cli-provider-ids.txt` with the command in its header.
 2. Update `contents/ui/code/catalog.js` in the same order. Name, color, dashboard and status come from the provider descriptors in upstream's `Sources/CodexBarCore/Providers`; `minCli` is the CLI release that introduced the provider.
 3. Take the icon from upstream's `Sources/CodexBar/Resources`. Monochrome artwork gets the `ColorScheme-Text` wrapper the existing icons use; a fully colored logo keeps its colors and sets `logoColor`.
-4. A provider whose descriptor sets `usesDetailBackedWindow: true` also goes into `DETAIL_BACKED_WINDOWS` in `catalog.js`: its windows report a detail, such as a spend limit, where others report the reset time.
+4. A provider whose descriptor sets `usesDetailBackedWindow: true` also goes into `DETAIL_BACKED_WINDOWS` in `catalog.js`: its windows report a detail, such as a spend limit, where others report the reset time. One with `progressColorStyle: .label` goes into `LABEL_COLORED_BARS`, whose bars use the text color.
 5. `tests/test_catalog.py` checks the order, required fields, icons and logo colors.
