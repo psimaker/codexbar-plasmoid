@@ -179,10 +179,11 @@ function cliProviderId(reported) {
     return reported
 }
 
-// The CLI does not reject a --provider name it does not know (a provider
-// that is newer than the installed CLI, or one removed upstream); it reports
-// the providers enabled in its own config instead. Keep only the entries of
-// the requested provider. Entries without a provider field are kept.
+// Before CodexBar 0.85.0 the CLI did not reject a --provider name it does
+// not know (a provider that is newer than the installed CLI, or one removed
+// upstream); it reported the providers enabled in its own config instead.
+// Keep only the entries of the requested provider. Entries without a
+// provider field are kept.
 function entriesForProvider(entries, id) {
     if (!Array.isArray(entries))
         return []
@@ -191,6 +192,20 @@ function entriesForProvider(entries, id) {
         return entry !== null && typeof entry === "object"
             && (typeof entry.provider !== "string"
                 || entry.provider === reported || entry.provider === id)
+    })
+}
+
+// Since CodexBar 0.85.0 the CLI rejects a --provider name it does not know
+// with an argument error ("Error: unknown provider 'x'") in its "cli" entry.
+// Other argument errors do not name a provider.
+function rejectsProvider(entries) {
+    if (!Array.isArray(entries))
+        return false
+    return entries.some(function (entry) {
+        var error = entry !== null && typeof entry === "object" && entry.provider === "cli"
+            ? entry.error : null
+        return !!error && error.kind === "args" && typeof error.message === "string"
+            && /provider/i.test(error.message)
     })
 }
 
