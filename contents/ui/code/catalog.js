@@ -6,7 +6,7 @@
 .pragma library
 
 var PROVIDERS = {
-    // Order follows `codexbar usage --help` (CodexBar 0.84.0).
+    // Order follows `codexbar usage --help` (CodexBar 0.85.0).
     "codex":        { name: "Codex",              color: "#49A3B0", dashboard: "https://chatgpt.com/settings/usage?tab=overview", status: "https://status.openai.com/", icon: "ProviderIcon-codex.svg", critter: "codex" },
     "openai":       { name: "OpenAI",             color: "#0F826E", dashboard: "https://platform.openai.com/usage", status: "https://status.openai.com", icon: "ProviderIcon-codex.svg" },
     "azure-openai": { name: "Azure OpenAI",       color: "#0078D4", dashboard: "https://ai.azure.com", status: "https://azure.status.microsoft/en-us/status", icon: "ProviderIcon-codex.svg" },
@@ -119,7 +119,9 @@ var PROVIDERS = {
     "abliteration": { name: "abliteration.ai",    color: "#1B1B1B", dashboard: "https://abliteration.ai", status: "", icon: "ProviderIcon-abliteration.svg", minCli: "0.81.0" },
     "opendesign":   { name: "OpenDesign",         color: "#202020", dashboard: "https://open-design.ai/cloud/dashboard", status: "", icon: "ProviderIcon-opendesign.svg", minCli: "0.83.0" },
     "siliconflow":  { name: "SiliconFlow",        color: "#6E29F5", dashboard: "https://cloud.siliconflow.cn", status: "", icon: "ProviderIcon-siliconflow.svg", minCli: "0.84.0" },
-    "tripo":        { name: "Tripo",              color: "#F8CF00", dashboard: "https://developers.tripo3d.ai/en/billing", status: "https://tripo3d.statuspage.io", icon: "ProviderIcon-tripo.svg", minCli: "0.84.0" }
+    "tripo":        { name: "Tripo",              color: "#F8CF00", dashboard: "https://developers.tripo3d.ai/en/billing", status: "https://tripo3d.statuspage.io", icon: "ProviderIcon-tripo.svg", minCli: "0.84.0" },
+    "googledeveloper": { name: "Google Developer Program", color: "#5B8DEF", dashboard: "https://me.developers.google.com/benefits", status: "", icon: "ProviderIcon-googledeveloper.svg", minCli: "0.85.0" },
+    "trustedrouter": { name: "TrustedRouter",      color: "#A9CDB9", dashboard: "https://trustedrouter.com/console", status: "", icon: "ProviderIcon-trustedrouter.svg", minCli: "0.85.0" }
 }
 
 // Providers whose local logs the `codexbar cost` command can price.
