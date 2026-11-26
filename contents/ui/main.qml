@@ -97,6 +97,8 @@ PlasmoidItem {
     property var probes: UsageProbes.initialState()
     // What the opt-in notifications last saw per provider (Notifications).
     property var notificationState: ({})
+    // Failed refreshes per provider (Notifications.failureTransition).
+    property var failureState: ({})
 
     // Optional schema-v1 claude-swap-compatible adapter state. Normal Claude
     // usage/cost queries remain active for the panel, overview and fallback UI.
@@ -931,9 +933,17 @@ PlasmoidItem {
         notificationState = result.state
         for (var i = 0; i < result.events.length; i++)
             sendNotification(result.events[i], row)
+        var d = usageData[p]
+        var failure = Notifications.failureTransition(failureState, p, d && d.error ? d.error : "",
+                                                      Plasmoid.configuration.notifyFailures)
+        failureState = failure.state
+        for (var j = 0; j < failure.events.length; j++)
+            sendNotification(failure.events[j], row)
     }
 
     function notificationText(event, row) {
+        if (event.kind === "failed")
+            return i18n("Refresh failed: %1", event.error)
         if (event.kind === "low")
             return i18n("%1: %2% left", event.label, event.remaining)
         if (event.kind === "reset")

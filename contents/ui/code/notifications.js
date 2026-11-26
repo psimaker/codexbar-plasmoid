@@ -7,6 +7,9 @@
 
 var STATUS_LEVELS = ["none", "minor", "major", "critical", "maintenance"]
 var DEFAULT_THRESHOLD = 10
+// Failed refreshes in a row before a provider counts as failing (#74), so a
+// single hiccup stays quiet.
+var FAILURE_STREAK = 2
 
 function threshold(value) {
     var n = Math.round(Number(value))
@@ -55,5 +58,39 @@ function transition(previous, provider, row, options) {
         if (before && before.level !== level && opts.status === true)
             events.push({ kind: "status", provider: provider, level: level })
     }
+    return { state: state, events: events }
+}
+
+// Refresh failures (#74), kept apart from the quota and status state. A
+// provider that answered while the widget runs and then fails FAILURE_STREAK
+// refreshes in a row is announced once, with the CLI's error, until it
+// answers again. One failing since the start is never announced, and a
+// failure that began while the option was off is not announced later.
+// previous maps provider -> { failures, announced }; error is the refresh's
+// error, "" when it worked. Returns { state, events }; events are
+// { kind: "failed", provider, error }.
+function failureTransition(previous, provider, error, enabled) {
+    var state = {}
+    for (var key in previous) {
+        if (key !== provider)
+            state[key] = previous[key]
+    }
+    var message = typeof error === "string" ? error.trim() : ""
+    if (message === "") {
+        state[provider] = { failures: 0, announced: false }
+        return { state: state, events: [] }
+    }
+    var before = previous[provider]
+    if (!before)
+        return { state: state, events: [] }
+    var failures = before.failures + 1
+    var announced = before.announced === true
+    var events = []
+    if (failures >= FAILURE_STREAK && !announced) {
+        announced = true
+        if (enabled === true)
+            events.push({ kind: "failed", provider: provider, error: message })
+    }
+    state[provider] = { failures: failures, announced: announced }
     return { state: state, events: events }
 }

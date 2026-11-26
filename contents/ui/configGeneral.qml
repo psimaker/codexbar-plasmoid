@@ -22,6 +22,7 @@ KCM.SimpleKCM {
     property alias cfg_notifyQuota: notifyQuota.checked
     property alias cfg_notifyThreshold: notifyThreshold.value
     property alias cfg_notifyStatus: notifyStatus.checked
+    property alias cfg_notifyFailures: notifyFailures.checked
     property alias cfg_cliPath: cliPath.text
     property alias cfg_cliEnvironmentFile: cliEnvironmentFile.text
     property alias cfg_enableClaudeAccounts: enableClaudeAccounts.checked
@@ -241,10 +242,15 @@ KCM.SimpleKCM {
             enabled: showStatus.checked
         }
 
+        QQC2.CheckBox {
+            id: notifyFailures
+            text: i18n("When a provider keeps failing to refresh")
+        }
+
         QQC2.Label {
             Layout.fillWidth: true
             Layout.maximumWidth: page.hintWidth
-            text: i18n("Only changes seen while the widget runs are announced, never what it finds on start. Status changes need \"Show provider status\".")
+            text: i18n("Only changes seen while the widget runs are announced, never what it finds on start. Status changes need \"Show provider status\". A provider keeps failing after two failed refreshes in a row; it is announced once until it refreshes again.")
             wrapMode: Text.WordWrap
             opacity: 0.7
             font: Kirigami.Theme.smallFont

@@ -102,6 +102,42 @@ function step(state, r, options = all, provider = "codex") {
     assert.ok(other.state["codexspark/primary"])
 }
 
+// Refresh failures (#74): announced once after two failed refreshes in a
+// row of a provider that answered before, with the CLI's error.
+{
+    const fail = (state, error, enabled = true, provider = "gemini") =>
+        lib.failureTransition(state, provider, error, enabled)
+    // failing since the start is never announced
+    let r = fail({}, "Not logged in to Gemini.")
+    assert.deepEqual(plain(r.state), {})
+    r = fail(r.state, "Not logged in to Gemini.")
+    assert.deepEqual(plain(r.events), [])
+    // after an answer, the second failure in a row is announced, once
+    r = fail({}, "")
+    assert.deepEqual(plain(r.state), { gemini: { failures: 0, announced: false } })
+    r = fail(r.state, " Timed out querying the CodexBar CLI ")
+    assert.deepEqual(plain(r.events), [])
+    r = fail(r.state, "Timed out querying the CodexBar CLI")
+    assert.deepEqual(plain(r.events),
+        [{ kind: "failed", provider: "gemini", error: "Timed out querying the CodexBar CLI" }])
+    r = fail(r.state, "Timed out querying the CodexBar CLI")
+    assert.deepEqual(plain(r.events), [])
+    // an answer in between starts over, and so does a recovery
+    let s = fail(fail(fail({}, "").state, "x").state, "").state
+    assert.deepEqual(plain(fail(s, "x").events), [])
+    s = fail(r.state, "").state
+    assert.deepEqual(plain(s), { gemini: { failures: 0, announced: false } })
+    assert.equal(fail(fail(s, "again").state, "again").events.length, 1)
+    // a failure that began while the option was off stays quiet once it is on
+    s = fail(fail(fail({}, "").state, "x", false).state, "x", false).state
+    assert.deepEqual(plain(fail(s, "x", true).events), [])
+    // providers are independent
+    s = fail(fail({}, "", true, "claude").state, "", true, "gemini").state
+    s = fail(fail(s, "down", true, "claude").state, "down", true, "claude").state
+    assert.deepEqual(plain(s.gemini), { failures: 0, announced: false })
+    assert.equal(lib.FAILURE_STREAK, 2)
+}
+
 // The threshold stays within 1 to 99 and defaults to 10.
 assert.equal(lib.threshold(undefined), 10)
 assert.equal(lib.threshold(0), 10)
