@@ -437,6 +437,22 @@ assert.equal(catalog.panelBalance("codex", { providerCost: { used: 0, limit: 0, 
 assert.equal(catalog.panelBalance("replicate", {}), "")
 assert.equal(catalog.panelBalance("replicate", null), "")
 
+// Why a provider's numbers may be out of date (#74): the CLI's error, else
+// the age of data fetched more than maxAge ago; nothing before the first
+// answer or while the data is current.
+const staleNow = Date.parse("2026-11-26T12:00:00Z")
+const fifteenMinutes = 15 * 60 * 1000
+assert.equal(catalog.staleReason(undefined, fifteenMinutes, staleNow), "")
+assert.equal(catalog.staleReason({ loading: true }, fifteenMinutes, staleNow), "")
+assert.equal(catalog.staleReason({ fetchedAt: staleNow - 60000, entry: {} }, fifteenMinutes, staleNow), "")
+assert.equal(catalog.staleReason({ fetchedAt: staleNow - 60000, error: " Not logged in to Gemini. " },
+    fifteenMinutes, staleNow), "Not logged in to Gemini.")
+assert.equal(catalog.staleReason({ fetchedAt: staleNow - 2 * 3600000, entry: {} }, fifteenMinutes, staleNow),
+    "Updated 2h ago")
+assert.equal(catalog.staleReason({ fetchedAt: staleNow - 2 * 3600000, error: "Timed out querying the CodexBar CLI" },
+    fifteenMinutes, staleNow), "Timed out querying the CodexBar CLI")
+assert.equal(catalog.staleReason({ fetchedAt: staleNow - 60000, error: "" }, fifteenMinutes, staleNow), "")
+
 // Reset countdown (#30): the window behind the panel percentage
 const countdownNow = Date.parse("2026-09-30T12:00:00Z")
 const pickAt = (resetsAt) => ({ remaining: 60, window: { usedPercent: 40, resetsAt } })

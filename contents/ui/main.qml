@@ -152,6 +152,9 @@ PlasmoidItem {
             } else {
                 lines.push(m.name + " — no data")
             }
+            var reason = staleReason(p)
+            if (reason !== "")
+                lines.push("⚠ " + reason)
         }
         return lines.join("\n")
     }
@@ -994,6 +997,11 @@ PlasmoidItem {
         return pick ? pick.remaining : -1
     }
 
+    // Data counts as stale after three refresh intervals without an answer.
+    function staleAfterMs() {
+        return Math.max(1, Plasmoid.configuration.refreshIntervalMinutes) * 60000 * 3
+    }
+
     function isStale(p) {
         rev
         var d = usageData[p]
@@ -1001,8 +1009,14 @@ PlasmoidItem {
             return true
         if (d.error && d.error.length > 0)
             return true
-        var maxAge = Math.max(1, Plasmoid.configuration.refreshIntervalMinutes) * 60000 * 3
-        return (nowMs - d.fetchedAt) > maxAge
+        return (nowMs - d.fetchedAt) > staleAfterMs()
+    }
+
+    // Why p's numbers may be out of date (Catalog.staleReason): what the
+    // panel's warning emblem and the tooltip report, "" when nothing.
+    function staleReason(p) {
+        rev
+        return Catalog.staleReason(usageData[p], staleAfterMs(), nowMs)
     }
 
     P5Support.DataSource {
