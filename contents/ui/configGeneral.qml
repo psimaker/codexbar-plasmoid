@@ -22,6 +22,7 @@ KCM.SimpleKCM {
     property alias cfg_notifyQuota: notifyQuota.checked
     property alias cfg_notifyThreshold: notifyThreshold.value
     property alias cfg_notifyStatus: notifyStatus.checked
+    property alias cfg_notifyFailures: notifyFailures.checked
     property alias cfg_cliPath: cliPath.text
     property alias cfg_cliEnvironmentFile: cliEnvironmentFile.text
     property alias cfg_enableClaudeAccounts: enableClaudeAccounts.checked
@@ -239,6 +240,11 @@ KCM.SimpleKCM {
             id: notifyStatus
             text: i18n("When a provider's status changes")
             enabled: showStatus.checked
+        }
+
+        QQC2.CheckBox {
+            id: notifyFailures
+            text: i18n("When a provider fails two refreshes in a row")
         }
 
         QQC2.Label {

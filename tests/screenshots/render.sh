@@ -287,7 +287,7 @@ popup_views() {
     [[ -n "$settings_window" ]] || { echo 'Settings click did not open its window' >&2; exit 1; }
     window="$settings_window"
     # The Notifications section adds three controls and a wrapped hint.
-    xdo windowsize --sync "$window" 1856 2240
+    xdo windowsize --sync "$window" 1856 2320
     xdo windowmove --sync "$window" 0 0
     xdo windowfocus --sync "$window"
     wait_state general settings-general
