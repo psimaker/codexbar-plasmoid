@@ -67,7 +67,7 @@ ColumnLayout {
         Item { Layout.fillWidth: true }
 
         // Only appears when organizationName is empty, so this never doubles
-        // up with an org name already shown by displayLabel.
+        // up with an org name that displayLabel adds to a shared email.
         PlasmaComponents3.Label {
             readonly property string tag: ClaudeAccounts.organizationTag(card.account)
             visible: tag !== ""
