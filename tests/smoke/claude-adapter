@@ -1,0 +1,24 @@
+#!/bin/sh
+# Stand-in for a schema-v1 Claude account adapter in the Plasma smoke test.
+# `--list --json` prints a read-only adapter's account list: aliases for a
+# shared email, a window left out, and a rate-limited account that only has
+# last-known usage. Reset and capture times are relative to now.
+case "$*" in
+    "--list --json")
+        ;;
+    *)
+        echo '{"schemaVersion":1,"error":{"type":"Unsupported","message":"read-only adapter"}}'
+        exit 1
+        ;;
+esac
+at() { date -u -d "@$(( $(date +%s) + $1 ))" +%Y-%m-%dT%H:%M:%SZ; }
+cat <<JSON
+{"schemaVersion":1,"activeAccountNumber":1,"supportsAccountSwitching":false,"accounts":[
+ {"number":1,"email":"me@example.com","alias":"Personal","active":true,"usageStatus":"ok",
+  "usage":{"sevenDay":{"pct":42,"resetsAt":"$(at 259200)"}},"usageFetchedAt":"$(at -60)"},
+ {"number":2,"email":"me@example.com","alias":"Work","active":false,"usageStatus":"unavailable","usage":null,
+  "lastGoodUsage":{"fiveHour":{"pct":100,"resetsAt":"$(at 5400)"},"sevenDay":{"pct":71,"resetsAt":"$(at 345600)"}},
+  "lastGoodFetchedAt":"$(at -1800)"},
+ {"number":3,"email":"other@example.com","active":false,"usageStatus":"token_expired","usage":null}
+]}
+JSON

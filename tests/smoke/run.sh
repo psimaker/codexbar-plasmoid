@@ -146,6 +146,11 @@ config_state="claude" render popup-balance "$(package balance enabledProviders=c
 # and shows its detail ("$1.80 / $10.00") instead of "Resets …".
 config_state="trustedrouter" render popup-detail "$(package detail enabledProviders=trustedrouter)" \
     560x860 -f planar
+# The Claude account view against a read-only adapter: aliases label the two
+# accounts of one email, the rate-limited one shows its last-known usage, and
+# no card offers a switch.
+config_state="claude" render popup-claude-accounts "$(package claude-accounts enabledProviders=claude \
+    enableClaudeAccounts=true "claudeAdapterPath=$repo/tests/smoke/claude-adapter")" 560x860 -f planar
 # A config.json the CLI cannot write: the migration fails, the widget keeps
 # its own list, and the popup shows the CLI's error.
 CODEXBAR_MOCK_READONLY=1 render popup-readonly "$(package readonly "$three")" 560x860 -f planar
