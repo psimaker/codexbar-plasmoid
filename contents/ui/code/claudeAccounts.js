@@ -97,6 +97,9 @@ function parsePace(raw) {
     }
 }
 
+// A window the adapter has no data for is simply left out. An explicit JSON
+// null reads the same way here, although CodexBar's own parser rejects it, so
+// one adapter quirk cannot drop every account from the view.
 function parseWindow(raw, slot, name, weekly) {
     if (raw === undefined || raw === null)
         return { ok: true, value: null }
@@ -134,8 +137,8 @@ function parseSpend(raw) {
     if (!isObject(raw))
         return null
     if (typeof raw.pct !== "number" || !isFinite(raw.pct)
-            || typeof raw.used !== "number" || !isFinite(raw.used)
-            || typeof raw.limit !== "number" || !isFinite(raw.limit))
+            || typeof raw.used !== "number" || !isFinite(raw.used) || raw.used < 0
+            || typeof raw.limit !== "number" || !isFinite(raw.limit) || raw.limit <= 0)
         return null
     var resetsAt = null
     if (hasOwn(raw, "resetsAt") && raw.resetsAt !== null
@@ -216,6 +219,78 @@ function parseUsageMeasuredAt(row, nowMs, usageIsLastGood) {
         : parseMeasuredAt(row, nowMs, "usageFetchedAt", "usageAgeSeconds")
 }
 
+// The windows of one usage object. Live windows are strict: a malformed one
+// rejects the list, like CodexBar does. The lastGoodUsage fallback is
+// display-only, so a malformed window there is dropped on its own instead.
+function parseMeasurement(usage, slot, strict) {
+    var label = strict ? "" : "last-known "
+    var fiveHour = parseWindow(usage.fiveHour, slot, label + "five-hour", false)
+    if (!fiveHour.ok && strict)
+        return fiveHour
+    var sevenDay = parseWindow(usage.sevenDay, slot, label + "seven-day", true)
+    if (!sevenDay.ok && strict)
+        return sevenDay
+    return {
+        ok: true,
+        value: {
+            fiveHour: fiveHour.ok ? fiveHour.value : null,
+            sevenDay: sevenDay.ok ? sevenDay.value : null,
+            scoped: parseScopedWindows(usage.scoped),
+            spend: parseSpend(usage.spend)
+        }
+    }
+}
+
+function measurementIsEmpty(m) {
+    return m.fiveHour === null && m.sevenDay === null
+        && m.scoped.length === 0 && m.spend === null
+}
+
+function normalizedEmail(email) {
+    return email.trim().toLowerCase()
+}
+
+// Labels as CodexBar's ClaudeSwapAccountProjection.displayLabel words them:
+// the alias, else the email; an email that several slots share gets
+// " · organizationName" or " · Account N", and " · Account N" again when that
+// still collides. A slot without email is "Account N".
+function assignDisplayLabels(accounts) {
+    var emailCounts = {}
+    for (var i = 0; i < accounts.length; i++) {
+        var key = normalizedEmail(accounts[i].email)
+        if (key !== "")
+            emailCounts[key] = (emailCounts[key] || 0) + 1
+    }
+    function sharesEmail(account) {
+        var key = normalizedEmail(account.email)
+        return key !== "" && emailCounts[key] > 1
+    }
+    var candidates = accounts.map(function (account) {
+        if (account.alias !== "")
+            return account.alias
+        if (account.email === "")
+            return "Account " + account.number
+        if (!sharesEmail(account))
+            return account.email
+        return account.email + " · "
+            + (account.organizationName !== "" ? account.organizationName : "Account " + account.number)
+    })
+    var collisions = {}
+    for (var j = 0; j < accounts.length; j++) {
+        if (accounts[j].alias === "" && sharesEmail(accounts[j])) {
+            var label = candidates[j].toLowerCase()
+            collisions[label] = (collisions[label] || 0) + 1
+        }
+    }
+    for (var k = 0; k < accounts.length; k++) {
+        var account = accounts[k]
+        account.displayLabel = account.alias === "" && sharesEmail(account)
+                && collisions[candidates[k].toLowerCase()] > 1
+            ? candidates[k] + " · Account " + account.number
+            : candidates[k]
+    }
+}
+
 function parseList(text, nowMs) {
     if (nowMs === undefined)
         nowMs = Date.now()
@@ -235,6 +310,14 @@ function parseList(text, nowMs) {
         return { ok: false, error: "The Claude account adapter output has no activeAccountNumber." }
     if (object.activeAccountNumber !== null && !isPositiveInteger(object.activeAccountNumber))
         return { ok: false, error: "The Claude account adapter returned an invalid active account slot." }
+    // Additive capability: a read-only adapter sends false, and then no
+    // account offers a switch. Absent means true, as for claude-swap.
+    var supportsAccountSwitching = true
+    if (hasOwn(object, "supportsAccountSwitching")) {
+        if (typeof object.supportsAccountSwitching !== "boolean")
+            return { ok: false, error: "The Claude account adapter returned a non-boolean supportsAccountSwitching." }
+        supportsAccountSwitching = object.supportsAccountSwitching
+    }
 
     var accounts = []
     var slots = {}
@@ -253,22 +336,26 @@ function parseList(text, nowMs) {
         if (typeof row.usageStatus !== "string")
             return { ok: false, error: "Account " + row.number + " has no usageStatus." }
 
-        // A schema-v1 row carries either a live `usage` object or, once a fetch
-        // fails, a display-grade `lastGoodUsage` fallback in the same shape with
-        // its own measurement timestamps. Project both through the one strict
-        // window parser so cached windows are shown as non-current rather than
-        // dropped, and never let a fallback masquerade as a live measurement.
-        var live = isObject(row.usage) ? row.usage : null
-        var lastGood = live === null && isObject(row.lastGoodUsage) ? row.lastGoodUsage : null
-        var usageIsLastGood = lastGood !== null
-        var usage = live || lastGood || {}
-        var windowLabel = usageIsLastGood ? "last-known " : ""
-        var fiveHour = parseWindow(usage.fiveHour, row.number, windowLabel + "five-hour", false)
-        if (!fiveHour.ok)
-            return fiveHour
-        var sevenDay = parseWindow(usage.sevenDay, row.number, windowLabel + "seven-day", true)
-        if (!sevenDay.ok)
-            return sevenDay
+        // A schema-v1 row carries a live `usage` object or, once a fetch
+        // fails (a rate-limited account reports usageStatus "unavailable" and
+        // usage null), a display-only `lastGoodUsage` fallback in the same
+        // shape. As in CodexBar, the fallback is used only when the row is not
+        // "ok", the live windows are empty, and it carries its capture time,
+        // so it is never shown as current or without saying when it was read.
+        var live = parseMeasurement(isObject(row.usage) ? row.usage : {}, row.number, true)
+        if (!live.ok)
+            return live
+        var measurement = live.value
+        var usageIsLastGood = false
+        if (row.usageStatus !== "ok" && measurementIsEmpty(measurement)
+                && isObject(row.lastGoodUsage)
+                && parseUsageMeasuredAt(row, nowMs, true) !== null) {
+            var lastGood = parseMeasurement(row.lastGoodUsage, row.number, false).value
+            if (!measurementIsEmpty(lastGood)) {
+                measurement = lastGood
+                usageIsLastGood = true
+            }
+        }
 
         var email = optionalText(row, "email")
         // These are canonical claude-swap schema-v1 identity fields. Keep
@@ -276,7 +363,6 @@ function parseList(text, nowMs) {
         // compatible while giving same-email accounts a useful label.
         var organizationName = optionalText(row, "organizationName")
         var alias = optionalText(row, "alias")
-        var displayLabel = alias || organizationName || email
         // Additive: claude-swap sets this from whether the account has an
         // organization uuid, without exposing the uuid itself. organizationName
         // already carries the org's name when known, so this only adds
@@ -290,18 +376,19 @@ function parseList(text, nowMs) {
             organizationName: organizationName,
             isOrganization: isOrganization,
             alias: alias,
-            displayLabel: displayLabel !== "" ? displayLabel : "Account " + row.number,
+            displayLabel: "", // assignDisplayLabels, once every row is known
             active: row.active,
+            switchingSupported: supportsAccountSwitching,
             // Additive schema-v1 flag, emitted only for slots the user held
             // out of automatic rotation. Such a slot stays a valid explicit
             // switch target, so this is display-only and never gates the
             // switch action.
             disabled: row.disabled === true,
             usageStatus: row.usageStatus,
-            fiveHour: fiveHour.value,
-            sevenDay: sevenDay.value,
-            scoped: parseScopedWindows(usage.scoped),
-            spend: parseSpend(usage.spend),
+            fiveHour: measurement.fiveHour,
+            sevenDay: measurement.sevenDay,
+            scoped: measurement.scoped,
+            spend: measurement.spend,
             usageIsLastGood: usageIsLastGood,
             usageMeasuredAt: parseUsageMeasuredAt(row, nowMs, usageIsLastGood)
         }
@@ -320,10 +407,12 @@ function parseList(text, nowMs) {
             return a.active ? -1 : 1
         return a.number - b.number
     })
+    assignDisplayLabels(accounts)
     return {
         ok: true,
         value: {
             activeAccountNumber: object.activeAccountNumber,
+            supportsAccountSwitching: supportsAccountSwitching,
             accounts: accounts
         }
     }
@@ -419,8 +508,10 @@ function paceText(win) {
 // instead of offering a button that cannot succeed.
 var SWITCHABLE_STATUSES = ["ok", "api_key", "unavailable", "token_expired", "foreign_credential"]
 
+// A read-only adapter (supportsAccountSwitching: false) gets no switch action
+// at all; its cards only show each account's details.
 function canActivate(account) {
-    if (!account || account.active)
+    if (!account || account.active || account.switchingSupported === false)
         return false
     return SWITCHABLE_STATUSES.indexOf(account.usageStatus) >= 0
 }
@@ -440,13 +531,19 @@ function statusError(account) {
         return ""
     switch (account.usageStatus) {
     case "ok":
-        return account.fiveHour || account.sevenDay
+        return account.fiveHour || account.sevenDay || account.spend
             || (account.scoped && account.scoped.length > 0)
             ? "" : "No usage windows reported."
+    // Without switching support the widget cannot do the repair, so point to
+    // the adapter instead of to a switch the card does not offer.
     case "token_expired":
-        return "Token expired. Switch to this account to refresh it."
+        return account.switchingSupported === false
+            ? "Token expired. Refresh it with the account adapter."
+            : "Token expired. Switch to this account to refresh it."
     case "foreign_credential":
-        return "The stored credential belongs to another account. Switch to this account to repair it."
+        return account.switchingSupported === false
+            ? "The stored credential belongs to another account. Repair it with the account adapter."
+            : "The stored credential belongs to another account. Switch to this account to repair it."
     case "relogin_required":
         return "The stored login is no longer valid. Re-login with the adapter to restore this account."
     case "api_key":
